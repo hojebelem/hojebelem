@@ -136,11 +136,30 @@ export async function updateEventAction(id: string, formData: FormData) {
     where: { id },
     data: {
       ...values,
+      reviewedAt: new Date(),
       categories: { deleteMany: {}, create: { categoryId: input.category } },
     },
   });
   revalidateEventPages(event.slug);
   redirect("/admin/eventos");
+}
+
+export async function approveEventAction(id: string) {
+  await requireAdmin();
+  const event = await prisma.event.update({
+    where: { id },
+    data: { isPublished: true, reviewedAt: new Date() },
+  });
+  revalidateEventPages(event.slug);
+}
+
+export async function rejectEventAction(id: string) {
+  await requireAdmin();
+  const event = await prisma.event.update({
+    where: { id },
+    data: { isPublished: false, rejectedAt: new Date() },
+  });
+  revalidateEventPages(event.slug);
 }
 
 export async function toggleEventPublishedAction(id: string) {

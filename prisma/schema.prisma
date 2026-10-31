@@ -73,8 +73,12 @@ model Event {
   // Usado para dedupe — impede que o mesmo evento seja inserido duas vezes
   externalId           String?               @unique
   source               String?               @default("manual")
+  // reviewedAt: admin aprovou/editou; o coletor passa a só atualizar data, preço e link
+  // rejectedAt: admin descartou; some da fila de pendentes
+  reviewedAt           DateTime?
+  rejectedAt           DateTime?
   // ──────────────────────────────────────────────
-  isFeatured           Boolean              @default(false)
+  isFeatured          Boolean              @default(false)
   isPublished          Boolean              @default(false)
   cityId               String
   city                 City                 @relation(fields: [cityId], references: [id])

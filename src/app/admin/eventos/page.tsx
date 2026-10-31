@@ -1,4 +1,8 @@
-import { toggleEventPublishedAction } from "@/app/actions";
+import {
+  approveEventAction,
+  rejectEventAction,
+  toggleEventPublishedAction,
+} from "@/app/actions";
 import { prisma } from "@/lib/prisma";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -6,10 +10,16 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function AdminEvents() {
-  const events = await prisma.event.findMany({
+  const all = await prisma.event.findMany({
+    where: { rejectedAt: null },
     include: { categories: { include: { category: true } } },
     orderBy: { updatedAt: "desc" },
   });
+  // vindos do coletor e ainda sem revisão do admin
+  const isPending = (e: (typeof all)[number]) =>
+    e.source !== "manual" && !e.reviewedAt;
+  const pending = all.filter(isPending);
+  const events = all.filter((e) => !isPending(e));
   return (
     <div className="admin-page shell page-space">
       <div className="admin-heading">
@@ -22,6 +32,38 @@ export default async function AdminEvents() {
           <Plus /> Novo evento
         </Link>
       </div>
+      {pending.length > 0 && (
+        <>
+          <h2 className="admin-section-title">
+            Pendentes de revisão ({pending.length})
+          </h2>
+          <div className="admin-list">
+            {pending.map((event) => (
+              <article key={event.id}>
+                <span>{event.categories[0]?.category.icon ?? "✦"}</span>
+                <div>
+                  <b>{event.title}</b>
+                  <small>
+                    {event.venueName} • vindo da {event.source}
+                  </small>
+                </div>
+                <div className="admin-row-actions">
+                  <form action={approveEventAction.bind(null, event.id)}>
+                    <button type="submit">Aprovar</button>
+                  </form>
+                  <Link href={`/admin/eventos/${event.id}/editar`}>
+                    Revisar
+                  </Link>
+                  <form action={rejectEventAction.bind(null, event.id)}>
+                    <button type="submit">Descartar</button>
+                  </form>
+                </div>
+              </article>
+            ))}
+          </div>
+          <h2 className="admin-section-title">Todos os eventos</h2>
+        </>
+      )}
       <div className="admin-list">
         {events.map((event) => {
           const toggle = toggleEventPublishedAction.bind(null, event.id);

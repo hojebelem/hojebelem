@@ -40,7 +40,7 @@ python3 collector/collector.py
 | `SYMPLA_BASE_URL` | eventos/belem-pa | URL de listagem |
 | `COLLECTOR_MAX_PAGES` | 5 | Máximo de páginas por coleta |
 | `COLLECTOR_MAX_DAYS_AHEAD` | 120 | Coleta eventos até N dias no futuro |
-| `COLLECTOR_AUTO_PUBLISH` | true | Publicar eventos automaticamente |
+| `COLLECTOR_AUTO_PUBLISH` | false | Publicar sem revisão do admin (por padrão entram como pendentes em `/admin/eventos`) |
 | `COLLECTOR_CITY_ID` | (busca slug `belem`) | cityId fixo opcional |
 | `COLLECTOR_CREATED_BY_ID` | (busca 1º admin) | userId fixo opcional |
 | `SYMPLA_USER_AGENT` | Chrome 126 | User-Agent das requisições |

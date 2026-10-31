@@ -33,7 +33,7 @@ services:
       SYMPLA_BASE_URL: https://www.sympla.com.br/eventos/belem-pa
       COLLECTOR_MAX_PAGES: 5
       COLLECTOR_MAX_DAYS_AHEAD: 120
-      COLLECTOR_AUTO_PUBLISH: "true"
+      COLLECTOR_AUTO_PUBLISH: "false"
     depends_on:
       postgres:
         condition: service_healthy

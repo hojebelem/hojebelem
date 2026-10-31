@@ -21,12 +21,6 @@ export default async function Home() {
       <section className="hero">
         <HeroSlideshow />
         <div className="hero-overlay" />
-        <div className="hero-floaters" aria-hidden="true">
-          <span>🎵</span>
-          <span>🪩</span>
-          <span>🍹</span>
-          <span>🎉</span>
-        </div>
         <div className="hero-copy">
           <p className="location">
             <MapPin /> Belém, Pará

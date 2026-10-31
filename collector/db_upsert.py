@@ -44,27 +44,34 @@ def upsert_event(db_url: str, event: dict) -> bool:
                     %(cityId)s, %(createdById)s, NOW(), NOW()
                 )
                 ON CONFLICT ("externalId") DO UPDATE SET
-                    title = EXCLUDED.title,
+                    -- data, preco e link sempre acompanham a Sympla
                     "startAt" = EXCLUDED."startAt",
                     "endAt" = EXCLUDED."endAt",
-                    "venueName" = EXCLUDED."venueName",
-                    address = EXCLUDED.address,
                     "externalPurchaseLink" = EXCLUDED."externalPurchaseLink",
-                    "coverImageUrl" = EXCLUDED."coverImageUrl",
                     price = EXCLUDED.price,
-                    description = EXCLUDED.description,
+                    -- textos e capa: depois que o admin revisou, ficam como ele deixou
+                    title = CASE WHEN "Event"."reviewedAt" IS NULL
+                        THEN EXCLUDED.title ELSE "Event".title END,
+                    "venueName" = CASE WHEN "Event"."reviewedAt" IS NULL
+                        THEN EXCLUDED."venueName" ELSE "Event"."venueName" END,
+                    address = CASE WHEN "Event"."reviewedAt" IS NULL
+                        THEN EXCLUDED.address ELSE "Event".address END,
+                    "coverImageUrl" = CASE WHEN "Event"."reviewedAt" IS NULL
+                        THEN EXCLUDED."coverImageUrl" ELSE "Event"."coverImageUrl" END,
+                    description = CASE WHEN "Event"."reviewedAt" IS NULL
+                        THEN EXCLUDED.description ELSE "Event".description END,
                     "updatedAt" = NOW()
-                RETURNING id
+                RETURNING id, "reviewedAt"
             """),
             event,
         )
 
-        event_id = cur.fetchone()[0]
+        event_id, reviewed_at = cur.fetchone()
 
-        # 2. Busca a categoria pelo nome.
+        # 2. Busca a categoria pelo nome (evento ja revisado mantem a do admin).
         category_name = event.get("categoryName")
 
-        if category_name:
+        if category_name and reviewed_at is None:
             cur.execute(
                 """
                 SELECT id

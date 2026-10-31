@@ -19,7 +19,7 @@ Variaveis de ambiente:
   SYMPLA_BASE_URL          URL de listagem
   COLLECTOR_MAX_PAGES      max paginas por coleta (default: 5)
   COLLECTOR_MAX_DAYS_AHEAD dias no futuro a coletar (default: 120)
-  COLLECTOR_AUTO_PUBLISH   publicar automaticamente (default: true)
+  COLLECTOR_AUTO_PUBLISH   publicar automaticamente (default: false; o admin revisa)
   COLLECTOR_CITY_ID        cityId fixo (opcional)
   COLLECTOR_CREATED_BY_ID  userId fixo (opcional)
 """
@@ -68,7 +68,7 @@ MAX_DAYS_AHEAD = int(
 
 AUTO_PUBLISH = (
     os.environ
-    .get("COLLECTOR_AUTO_PUBLISH", "true")
+    .get("COLLECTOR_AUTO_PUBLISH", "false")
     .lower()
     == "true"
 )
