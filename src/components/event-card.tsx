@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarDays, MapPin } from "lucide-react";
-import { formatEventDate, getEventStatus } from "@/lib/events";
+import { MapPin } from "lucide-react";
+import { formatEventFullDate, getEventStatus } from "@/lib/events";
 import { FavoriteButton } from "@/components/favorite-button";
 export type CardEvent = {
   id: string;
@@ -45,25 +45,25 @@ export function EventCard({ event }: { event: CardEvent }) {
         <FavoriteButton eventId={event.id} />
       </div>
       <div className="event-body">
-        <div className="event-status">
-          <CalendarDays /> {formatEventDate(event.startAt)} <span>•</span>{" "}
-          <b className={ended ? "ended-status-text" : undefined}>{status}</b>
-        </div>
         <h3>
           <Link href={`/eventos/${event.slug}`}>{event.title}</Link>
         </h3>
         <p>
           <MapPin /> {event.venueName}
         </p>
+        <p className="event-when">{formatEventFullDate(event.startAt)}</p>
         <div className="event-price">
-          {event.price == null ? (
-            <strong>Gratuito</strong>
-          ) : (
-            <>
-              <small>a partir de</small>
-              <strong>R$ {event.price.toFixed(2).replace(".", ",")}</strong>
-            </>
-          )}
+          <span className={`event-tag${ended ? " ended-status-text" : ""}`}>
+            {status}
+          </span>
+          <span className="event-price-value">
+            <small>{event.price == null ? "entrada" : "a partir de"}</small>
+            <strong>
+              {event.price == null
+                ? "Gratuito"
+                : `R$ ${event.price.toFixed(2).replace(".", ",")}`}
+            </strong>
+          </span>
         </div>
       </div>
     </article>

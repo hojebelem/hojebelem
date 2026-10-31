@@ -1,0 +1,84 @@
+"use client";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+export function ScrollRow({
+  className,
+  children,
+}: {
+  className: string;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState({ left: false, right: false });
+  const update = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    setEdge({
+      left: el.scrollLeft > 4,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
+    });
+  }, []);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [update]);
+  const frame = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  // anda uma "página" inteira e para no início de um card, com easing suave
+  const go = (direction: 1 | -1) => {
+    const el = ref.current;
+    const items = el ? ([...el.children] as HTMLElement[]) : [];
+    if (!el || !items.length) return;
+    const base = items[0].offsetLeft;
+    const max = el.scrollWidth - el.clientWidth;
+    const raw = el.scrollLeft + direction * el.clientWidth;
+    const snapped = items
+      .map((item) => item.offsetLeft - base)
+      .reduce((best, x) => (Math.abs(x - raw) < Math.abs(best - raw) ? x : best));
+    const moved = direction === 1 ? snapped > el.scrollLeft + 4 : snapped < el.scrollLeft - 4;
+    const to = Math.max(0, Math.min(max, moved ? snapped : raw));
+    const from = el.scrollLeft;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const duration = reduce ? 0 : 800;
+    const start = performance.now();
+    cancelAnimationFrame(frame.current);
+    const step = (now: number) => {
+      const t = duration ? Math.min(1, (now - start) / duration) : 1;
+      const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      el.scrollLeft = from + (to - from) * eased;
+      if (t < 1) frame.current = requestAnimationFrame(step);
+    };
+    frame.current = requestAnimationFrame(step);
+  };
+  return (
+    <div className="scroll-wrap">
+      {edge.left && (
+        <button
+          type="button"
+          className="scroll-arrow scroll-arrow-left"
+          aria-label="Ver opções anteriores"
+          onClick={() => go(-1)}
+        >
+          <ChevronLeft />
+        </button>
+      )}
+      <div ref={ref} className={className} onScroll={update}>
+        {children}
+      </div>
+      {edge.right && (
+        <button
+          type="button"
+          className="scroll-arrow scroll-arrow-right"
+          aria-label="Ver mais opções"
+          onClick={() => go(1)}
+        >
+          <ChevronRight />
+        </button>
+      )}
+    </div>
+  );
+}

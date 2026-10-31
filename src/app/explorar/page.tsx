@@ -7,6 +7,7 @@ export default async function Explore() {
     getCategories(),
     getEvents(),
   ]);
+  const featured = events.filter((event) => event.isFeatured);
   return (
     <div className="shell page-space">
       <div className="page-intro">
@@ -17,20 +18,19 @@ export default async function Explore() {
       <section id="categorias" className="all-categories">
         <CategoryGrid categories={categories} />
       </section>
-      <EventSection
-        title="Em destaque"
-        events={events.filter((event) => event.isFeatured)}
-      />
+      {featured.length > 0 && (
+        <EventSection title="Em destaque" events={featured} />
+      )}
       {["musica-ao-vivo", "gastronomia", "teatro"].map((slug) => {
         const category = categories.find((item) => item.slug === slug);
         const filtered = events.filter((event) => event.category.slug === slug);
-        return (
+        return filtered.length > 0 ? (
           <EventSection
             key={slug}
             title={category?.name ?? slug}
-            events={filtered.length ? filtered : events.slice(0, 3)}
+            events={filtered}
           />
-        );
+        ) : null;
       })}
     </div>
   );

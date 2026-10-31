@@ -34,6 +34,22 @@ export function formatEventDate(date: Date) {
   return new Intl.DateTimeFormat("pt-BR", { timeZone: TIMEZONE, day: "2-digit", month: "short" }).format(date).replace(".", "");
 }
 
+// "Sábado, 31 de Out às 16:00"
+export function formatEventFullDate(date: Date) {
+  const part = (type: string) =>
+    new Intl.DateTimeFormat("pt-BR", {
+      timeZone: TIMEZONE,
+      weekday: "long",
+      day: "numeric",
+      month: "short",
+    })
+      .formatToParts(date)
+      .find((p) => p.type === type)?.value ?? "";
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const month = cap(part("month").replace(".", ""));
+  return `${cap(part("weekday"))}, ${part("day")} de ${month} às ${formatEventTime(date)}`;
+}
+
 export function formatEventTime(date: Date) {
   return new Intl.DateTimeFormat("pt-BR", { timeZone: TIMEZONE, hour: "2-digit", minute: "2-digit" }).format(date);
 }

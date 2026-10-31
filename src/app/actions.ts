@@ -11,27 +11,43 @@ import { saveProfileImage } from "@/lib/upload";
 import { fromZonedTime } from "date-fns-tz";
 import { TIMEZONE } from "@/lib/events";
 
+// só caminhos do próprio site, para não virar redirecionamento aberto
+function safeRedirect(value: FormDataEntryValue | null) {
+  const to = typeof value === "string" ? value : "";
+  return to.startsWith("/") && !to.startsWith("//") ? to : "/";
+}
+
 export async function loginAction(formData: FormData) {
+  const to = safeRedirect(formData.get("callbackUrl"));
   try {
     await signIn("credentials", {
       email: formData.get("email"),
       password: formData.get("password"),
-      redirectTo: "/",
+      redirectTo: to,
     });
   } catch (error) {
-    if (error instanceof AuthError) redirect("/login?erro=credenciais");
+    if (error instanceof AuthError)
+      redirect(
+        `/login?erro=credenciais&callbackUrl=${encodeURIComponent(to)}`,
+      );
     throw error;
   }
 }
 
+export async function googleAction() {
+  await signIn("google", { redirectTo: "/" });
+}
+
 export async function registerAction(formData: FormData) {
-  const data = z
+  const parsed = z
     .object({
-      name: z.string().min(2),
+      name: z.string().trim().min(2),
       email: z.string().email(),
       password: z.string().min(8),
     })
-    .parse(Object.fromEntries(formData));
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/cadastro?erro=dados");
+  const data = parsed.data;
   if (await prisma.user.findUnique({ where: { email: data.email } }))
     redirect("/cadastro?erro=email");
   await prisma.user.create({

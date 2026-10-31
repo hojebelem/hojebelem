@@ -1,5 +1,11 @@
 import { auth } from "@/auth";
-import { ChevronRight, CircleHelp, Info, UserRound } from "lucide-react";
+import {
+  ChevronRight,
+  CircleHelp,
+  Info,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
@@ -19,6 +25,9 @@ export default async function Profile() {
       icon: CircleHelp,
     },
     { href: "/sobre", label: "Sobre a plataforma", icon: Info },
+    ...(session?.user?.role === "ADMIN"
+      ? [{ href: "/admin", label: "Painel admin", icon: ShieldCheck }]
+      : []),
   ];
   return (
     <div className="profile-page shell page-space">
