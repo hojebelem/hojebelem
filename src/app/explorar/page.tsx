@@ -19,7 +19,11 @@ export default async function Explore() {
         <CategoryGrid categories={categories} />
       </section>
       {featured.length > 0 && (
-        <EventSection title="Em destaque" events={featured} />
+        <EventSection
+          title="Em destaque"
+          href="/eventos?destaque=1"
+          events={featured}
+        />
       )}
       {["musica-ao-vivo", "gastronomia", "teatro"].map((slug) => {
         const category = categories.find((item) => item.slug === slug);
@@ -28,6 +32,7 @@ export default async function Explore() {
           <EventSection
             key={slug}
             title={category?.name ?? slug}
+            href={`/eventos?categoria=${slug}`}
             events={filtered}
           />
         ) : null;

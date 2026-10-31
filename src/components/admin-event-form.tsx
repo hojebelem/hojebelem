@@ -1,4 +1,10 @@
 import type { EventStatusOverride } from "@prisma/client";
+import { AdminCoverPreview } from "./admin-cover-preview";
+
+const FORM_ERRORS: Record<string, string> = {
+  dados: "Não foi possível salvar. Confira os campos e tente de novo.",
+  datas: "A hora final precisa ser depois do início.",
+};
 
 type CategoryOption = { id: string; name: string; icon: string };
 type EventDefaults = {
@@ -23,13 +29,18 @@ export function AdminEventForm({
   categories,
   action,
   event,
+  error,
 }: {
   categories: CategoryOption[];
   action: (formData: FormData) => void | Promise<void>;
   event?: EventDefaults;
+  error?: string;
 }) {
   return (
     <form className="event-form" action={action}>
+      {error && FORM_ERRORS[error] && (
+        <p className="auth-error">{FORM_ERRORS[error]}</p>
+      )}
       {event && <input type="hidden" name="slug" value={event.slug} />}
       <section>
         <h2>Informações principais</h2>
@@ -54,7 +65,7 @@ export function AdminEventForm({
           />
         </label>
         <label>
-          Categorias
+          Categoria
           <select
             name="category"
             defaultValue={event?.categoryId ?? ""}
@@ -111,15 +122,9 @@ export function AdminEventForm({
       </section>
       <section>
         <h2>Divulgação e publicação</h2>
-        <label>
-          URL da imagem de capa
-          <input
-            type="text"
-            name="coverImageUrl"
-            defaultValue={event?.coverImageUrl ?? "/images/hero-belem.webp"}
-            placeholder="https://... ou /images/..."
-          />
-        </label>
+        <AdminCoverPreview
+          defaultValue={event?.coverImageUrl ?? "/images/hero-belem.webp"}
+        />
         <label>
           Link de compra ou reserva
           <input
@@ -170,6 +175,9 @@ export function AdminEventForm({
               defaultChecked={event?.isPublished}
             />{" "}
             Publicado
+            <small>
+              Desmarcado, o evento fica como rascunho e não aparece no site.
+            </small>
           </label>
           <label>
             <input

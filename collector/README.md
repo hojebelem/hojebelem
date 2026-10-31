@@ -23,14 +23,27 @@ sympla.com.br/eventos/belem-pa  →  parser Flight  →  APIs BFF (organizer/tic
 | `shared.py` | Constantes compartilhadas (User-Agent, timeouts) |
 | `image_downloader.py` | Download de imagens locais (postergado; usa-se URL externa) |
 | `Dockerfile.collector` | Container do coletor (serviço no compose) |
-| `tests/` | Testes pytest (14 testes) |
+| `tests/` | Testes pytest (o de upsert precisa do Postgres local) |
 
 ## Execução manual
 
+Rode da raiz do projeto, como módulo (o coletor usa imports relativos):
+
 ```bash
 export DATABASE_URL="postgresql://usuario:***@host:5432/hojebelem"
-python3 collector/collector.py
+python3 -m collector.collector
 ```
+
+Pelo Docker (usa o banco do `docker-compose.yml`):
+
+```bash
+docker compose run --rm collector
+```
+
+Os eventos entram como **pendentes de revisão** em `/admin/eventos`
+(`COLLECTOR_AUTO_PUBLISH=false`). Depois que o admin revisa, a coleta só
+atualiza data, hora final, preço e link. Como o site guarda eventos em cache,
+eventos novos do coletor aparecem em até 5 minutos.
 
 ## Variáveis de ambiente
 
@@ -40,6 +53,7 @@ python3 collector/collector.py
 | `SYMPLA_BASE_URL` | eventos/belem-pa | URL de listagem |
 | `COLLECTOR_MAX_PAGES` | 5 | Máximo de páginas por coleta |
 | `COLLECTOR_MAX_DAYS_AHEAD` | 120 | Coleta eventos até N dias no futuro |
+| `COLLECTOR_INTERVAL_HOURS` | 0 | Maior que 0: fica rodando e coleta a cada N horas (o compose usa 6) |
 | `COLLECTOR_AUTO_PUBLISH` | false | Publicar sem revisão do admin (por padrão entram como pendentes em `/admin/eventos`) |
 | `COLLECTOR_CITY_ID` | (busca slug `belem`) | cityId fixo opcional |
 | `COLLECTOR_CREATED_BY_ID` | (busca 1º admin) | userId fixo opcional |

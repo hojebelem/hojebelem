@@ -32,7 +32,11 @@ export function Footer() {
         <nav aria-label="Informações">
           <b>Informações</b>
           <Link href="/perguntas-frequentes">Perguntas frequentes</Link>
-          <Link href="/sobre">Termos e condições</Link>
+          <Link href="/divulgar">Divulgue seu evento</Link>
+          <Link href="/sobre">Sobre</Link>
+          <Link href="/contato">Contato</Link>
+          <Link href="/termos">Termos de uso</Link>
+          <Link href="/privacidade">Privacidade</Link>
         </nav>
         <div className="footer-social">
           <b>Siga a Hoje Belém</b>

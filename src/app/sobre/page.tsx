@@ -1,7 +1,7 @@
 export default function About() {
   return (
     <article className="legal-page shell page-space">
-      <p className="eyebrow">TERMOS E CONDIÇÕES</p>
+      <p className="eyebrow">SOBRE</p>
       <h1>Sobre a Hoje Belém</h1>
       <section>
         <p>

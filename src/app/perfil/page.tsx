@@ -3,10 +3,13 @@ import {
   ChevronRight,
   CircleHelp,
   Info,
+  LogOut,
+  Megaphone,
   ShieldCheck,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
+import { logoutAction } from "@/app/actions";
 import { prisma } from "@/lib/prisma";
 
 export default async function Profile() {
@@ -24,6 +27,7 @@ export default async function Profile() {
       label: "Perguntas frequentes",
       icon: CircleHelp,
     },
+    { href: "/divulgar", label: "Divulgue seu evento", icon: Megaphone },
     { href: "/sobre", label: "Sobre a plataforma", icon: Info },
     ...(session?.user?.role === "ADMIN"
       ? [{ href: "/admin", label: "Painel admin", icon: ShieldCheck }]
@@ -59,6 +63,14 @@ export default async function Profile() {
             <ChevronRight />
           </Link>
         ))}
+        {session && (
+          <form action={logoutAction}>
+            <button type="submit" className="danger">
+              <LogOut />
+              <span>Sair</span>
+            </button>
+          </form>
+        )}
       </nav>
     </div>
   );

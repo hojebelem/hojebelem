@@ -9,12 +9,15 @@ export function SearchForm({
   defaultCategory = "",
   defaultPrice = "",
   filtersOpen = false,
+  keep = {},
 }: {
   defaultValue?: string;
   categories?: CategoryOption[];
   defaultCategory?: string;
   defaultPrice?: string;
   filtersOpen?: boolean;
+  // filtros que a busca não edita (data, ordem...), reenviados como campos ocultos
+  keep?: Record<string, string | undefined>;
 }) {
   const [open, setOpen] = useState(filtersOpen);
   const router = useRouter();
@@ -30,6 +33,10 @@ export function SearchForm({
       action="/eventos"
       className={`search-form${open ? " search-form-open" : ""}`}
     >
+      {Object.entries(keep).map(
+        ([name, value]) =>
+          value && <input key={name} type="hidden" name={name} value={value} />,
+      )}
       <div className="search-main">
         <Search />
         <input

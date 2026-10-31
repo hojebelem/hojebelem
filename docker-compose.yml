@@ -34,6 +34,9 @@ services:
       COLLECTOR_MAX_PAGES: 5
       COLLECTOR_MAX_DAYS_AHEAD: 120
       COLLECTOR_AUTO_PUBLISH: "false"
+      # coleta automática a cada 6 horas; 0 = roda uma vez e sai
+      COLLECTOR_INTERVAL_HOURS: 6
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy

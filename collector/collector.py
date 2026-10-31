@@ -12,7 +12,7 @@ Fluxo completo:
 
 Execucao:
   export DATABASE_URL="postgresql://usuario:***@host:5432/hojebelem"
-  python3 collector/collector.py
+  python3 -m collector.collector   (da raiz do projeto)
 
 Variaveis de ambiente:
   DATABASE_URL             conexao PostgreSQL
@@ -378,5 +378,24 @@ def main() -> None:
 
 # ── Entry point ────────────────────────────────────────────────────────────────
 
+def run_forever(interval_hours: float) -> None:
+    """Coleta de tempos em tempos; uma falha nao derruba o agendamento."""
+
+    while True:
+        try:
+            main()
+        except (Exception, SystemExit) as error:
+            logger.exception("coleta falhou: %s", error)
+
+        logger.info("proxima coleta em %.1f h", interval_hours)
+        time.sleep(interval_hours * 3600)
+
+
 if __name__ == "__main__":
-    main()
+    # COLLECTOR_INTERVAL_HOURS > 0: fica rodando e coleta a cada N horas
+    interval = float(os.environ.get("COLLECTOR_INTERVAL_HOURS", "0"))
+
+    if interval > 0:
+        run_forever(interval)
+    else:
+        main()

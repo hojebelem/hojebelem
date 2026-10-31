@@ -21,8 +21,8 @@ export default function FAQ() {
         </p>
         <h2>Como um evento é publicado?</h2>
         <p>
-          Eventos são cadastrados e revisados no painel administrativo antes de
-          aparecerem publicamente.
+          Qualquer pessoa com conta pode enviar um evento pela página Divulgue
+          seu evento. A equipe revisa cada envio antes de publicar.
         </p>
       </section>
     </article>

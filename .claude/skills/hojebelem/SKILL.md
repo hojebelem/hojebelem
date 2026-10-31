@@ -60,6 +60,16 @@ Regra do usuário: o site deve ser fluido **como a Sympla**, sem exagero.
 - Depois de revisado, a coleta só atualiza **data, hora final, preço e link**; título, local, endereço, descrição, capa e categoria ficam como o admin deixou. A coleta nunca mexe em `slug` nem `isPublished` de evento existente.
 - Imagens de evento são por URL (sem upload).
 
+## Admin e contas
+
+- Telas: `/admin` (painel + bloco do coletor), `/admin/eventos` (abas por situação, busca, 30 por página, pendentes no topo), `/admin/eventos/novo` e `/editar`, `/admin/categorias`, `/admin/usuarios`. Navegação em `src/components/admin-nav.tsx` (layout `src/app/admin/layout.tsx`).
+- Ação destrutiva sempre com `AdminConfirmButton`. Evento do coletor (`source = "sympla"`) se **descarta**, não se exclui (excluído voltaria na próxima coleta).
+- Formulários validam com `safeParse` e devolvem `?erro=...` mostrado com a classe `auth-error`; nunca `.parse` que quebra a página.
+- Slugs: `slugify` / `makeSlug` em `actions.ts`.
+- Público: `/divulgar` manda evento com `source = "organizador"` para os Pendentes; `/favoritar/[id]` salva o favorito depois do login; Sair no Perfil.
+- Login limitado a 10 tentativas por e-mail a cada 15 min (`src/lib/rate-limit.ts`, em memória).
+- Filtros da lista pública: `?data=` (hoje, amanha, fim-de-semana, AAAA-MM-DD — `eventDateRange`), `?ordem=preco`, `?destaque=1`, `?pagina=`; links montados por `eventsHref`.
+
 ## Banco e ambiente (Windows)
 
 - Mudou o `schema.prisma`: `npx prisma migrate dev --name <nome>`. **Pare o `npm run dev` antes** e rode `npx prisma generate`, senão dá `EPERM` (o servidor trava a DLL do Prisma) e as páginas quebram com "Unknown argument".

@@ -1,8 +1,15 @@
+import Link from "next/link";
 import { EventCard } from "@/components/event-card";
 import { SearchForm } from "@/components/search-form";
 import { CategoryFilters } from "@/components/category-filters";
+import { DateFilters } from "@/components/date-filters";
+import { SortSelect } from "@/components/sort-select";
+import { eventsHref } from "@/components/events-href";
 import { GoogleAdSlot } from "@/components/google-ads";
-import { getCategories, getEvents } from "@/lib/data";
+import { countEvents, getCategories, getEvents } from "@/lib/data";
+
+const MAX_PAGES = 20;
+
 export default async function EventsPage({
   searchParams,
 }: {
@@ -11,13 +18,34 @@ export default async function EventsPage({
     categoria?: string;
     preco?: string;
     filtros?: string;
+    data?: string;
+    ordem?: string;
+    destaque?: string;
+    pagina?: string;
   }>;
 }) {
   const p = await searchParams;
-  const [events, categories] = await Promise.all([
-    getEvents({ search: p.q, category: p.categoria, price: p.preco }),
+  const page = Math.min(Math.max(Number.parseInt(p.pagina ?? "", 10) || 1, 1), MAX_PAGES);
+  const filters = {
+    search: p.q,
+    category: p.categoria,
+    price: p.preco,
+    date: p.data,
+    featured: p.destaque === "1",
+  };
+  const [events, total, categories] = await Promise.all([
+    getEvents({ ...filters, sort: p.ordem === "preco" ? "preco" : "data", page }),
+    countEvents(filters),
     getCategories(),
   ]);
+  const params = {
+    q: p.q,
+    categoria: p.categoria,
+    preco: p.preco,
+    ordem: p.ordem,
+    destaque: p.destaque,
+    data: p.data,
+  };
   return (
     <div className="shell page-space">
       <div className="page-intro">
@@ -31,14 +59,19 @@ export default async function EventsPage({
         defaultCategory={p.categoria}
         defaultPrice={p.preco}
         filtersOpen={p.filtros === "1" || Boolean(p.preco)}
+        keep={{ data: p.data, ordem: p.ordem, destaque: p.destaque }}
       />
-      <CategoryFilters categories={categories} selected={p.categoria} />
+      <DateFilters params={params} />
+      <CategoryFilters
+        categories={categories}
+        selected={p.categoria}
+        params={params}
+      />
       <div className="results-meta">
-        <b>{events.length} eventos encontrados</b>
-        <select aria-label="Ordenar eventos">
-          <option>Mais próximos</option>
-          <option>Menor preço</option>
-        </select>
+        <b>
+          {total} {total === 1 ? "evento encontrado" : "eventos encontrados"}
+        </b>
+        <SortSelect params={params} />
       </div>
       <GoogleAdSlot slot={process.env.NEXT_PUBLIC_ADSENSE_LIST_SLOT} />
       {events.length ? (
@@ -51,6 +84,16 @@ export default async function EventsPage({
         <div className="empty-state">
           <b>Nenhum evento encontrado</b>
           <p>Tente outro termo ou remova um dos filtros.</p>
+        </div>
+      )}
+      {total > events.length && page < MAX_PAGES && (
+        <div className="load-more">
+          <Link
+            href={eventsHref(params, { pagina: String(page + 1) })}
+            scroll={false}
+          >
+            Carregar mais eventos
+          </Link>
         </div>
       )}
     </div>

@@ -21,7 +21,12 @@ export const metadata: Metadata = {
   },
   description:
     "Descubra shows, cultura, gastronomia e experiências em Belém do Pará.",
-  openGraph: { locale: "pt_BR", type: "website", siteName: "Hoje Belém" },
+  openGraph: {
+    locale: "pt_BR",
+    type: "website",
+    siteName: "Hoje Belém",
+    images: ["/images/hero-belem.webp"],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -11,8 +11,35 @@ import { formatEventDate, startOfTodayInBelem } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
+const pendingWhere = {
+  source: { not: "manual" },
+  reviewedAt: null,
+  rejectedAt: null,
+};
+
+const collectionFormat = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Belem",
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+// "31/10, 14:20" -> "31/10 às 14:20"
+function formatCollection(date: Date) {
+  return collectionFormat.format(date).replace(",", " às");
+}
+
 export default async function Admin() {
-  const [published, upcoming, pending, cancelled, recent] = await Promise.all([
+  const [
+    published,
+    upcoming,
+    pending,
+    cancelled,
+    recent,
+    lastCollection,
+    symplaPending,
+  ] = await Promise.all([
     prisma.event.count({ where: { isPublished: true, rejectedAt: null } }),
     prisma.event.count({
       where: {
@@ -23,9 +50,7 @@ export default async function Admin() {
         ],
       },
     }),
-    prisma.event.count({
-      where: { source: { not: "manual" }, reviewedAt: null, rejectedAt: null },
-    }),
+    prisma.event.count({ where: pendingWhere }),
     prisma.event.count({
       where: { statusOverride: "CANCELLED", rejectedAt: null },
     }),
@@ -34,7 +59,13 @@ export default async function Admin() {
       orderBy: { updatedAt: "desc" },
       take: 5,
     }),
+    prisma.event.aggregate({
+      where: { source: "sympla" },
+      _max: { updatedAt: true },
+    }),
+    prisma.event.count({ where: { ...pendingWhere, source: "sympla" } }),
   ]);
+  const lastRun = lastCollection._max.updatedAt;
   const stats = [
     { Icon: CalendarCheck, label: "Publicados", value: published },
     { Icon: CalendarClock, label: "Próximos", value: upcoming },
@@ -68,6 +99,26 @@ export default async function Admin() {
           revisão. <Link href="/admin/eventos">Revisar agora →</Link>
         </p>
       )}
+      <section className="admin-collector">
+        <h2>Coletor da Sympla</h2>
+        <p>
+          Última coleta:{" "}
+          <b>{lastRun ? formatCollection(lastRun) : "Nenhuma coleta ainda"}</b>
+        </p>
+        <p>
+          Pendentes de revisão: <b>{symplaPending}</b>{" "}
+          {symplaPending > 0 && (
+            <Link href="/admin/eventos?status=pendentes">Revisar →</Link>
+          )}
+        </p>
+        <small>
+          A coleta roda automaticamente a cada 6 horas pelo Docker (serviço
+          collector). Para rodar agora:{" "}
+          <code>
+            docker compose run --rm -e COLLECTOR_INTERVAL_HOURS=0 collector
+          </code>
+        </small>
+      </section>
       <section className="admin-list">
         <div>
           <h2>Atualizados recentemente</h2>
@@ -79,7 +130,8 @@ export default async function Admin() {
             <div>
               <b>{event.title}</b>
               <small>
-                {event.venueName} • {event.isPublished ? "Publicado" : "Rascunho"}
+                {event.venueName} •{" "}
+                {event.isPublished ? "Publicado" : "Rascunho"}
               </small>
             </div>
             <Link href={`/admin/eventos/${event.id}/editar`}>Editar</Link>

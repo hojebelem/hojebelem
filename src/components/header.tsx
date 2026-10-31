@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { auth } from "@/auth";
 import { Heart, UserRound } from "lucide-react";
 import { Logo } from "./logo";
 import { HeaderSearch } from "./header-search";
 
-export function Header() {
+export async function Header() {
+  const session = await auth();
+  const label = session?.user?.name || session?.user?.email;
   return (
     <header className="site-header">
       <div className="shell header-inner">
@@ -18,9 +21,19 @@ export function Header() {
           <Link href="/wishlist" aria-label="Favoritos">
             <Heart />
           </Link>
-          <Link href="/perfil" aria-label="Perfil">
-            <UserRound />
-          </Link>
+          {label ? (
+            <Link
+              href="/perfil"
+              className="header-user"
+              aria-label={`Perfil de ${label}`}
+            >
+              {label.charAt(0).toUpperCase()}
+            </Link>
+          ) : (
+            <Link href="/perfil" aria-label="Perfil">
+              <UserRound />
+            </Link>
+          )}
         </div>
       </div>
     </header>

@@ -2,6 +2,7 @@ import { EventSection } from "@/components/section";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Heart } from "lucide-react";
+import { startOfTodayInBelem } from "@/lib/events";
 
 export default async function Wishlist() {
   const session = await auth();
@@ -31,6 +32,11 @@ export default async function Wishlist() {
   const recommendationsRaw = await prisma.event.findMany({
     where: {
       isPublished: true,
+      // só eventos que ainda não acabaram
+      OR: [
+        { endAt: { gte: new Date() } },
+        { endAt: null, startAt: { gte: startOfTodayInBelem() } },
+      ],
       id: { notIn: events.map((event) => event.id) },
       ...(categoryIds.length
         ? { categories: { some: { categoryId: { in: categoryIds } } } }

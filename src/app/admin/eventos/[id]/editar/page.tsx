@@ -1,4 +1,9 @@
-import { updateEventAction } from "@/app/actions";
+import {
+  deleteEventAction,
+  rejectEventAction,
+  updateEventAction,
+} from "@/app/actions";
+import { AdminConfirmButton } from "@/components/admin-confirm-button";
 import { AdminEventForm } from "@/components/admin-event-form";
 import { prisma } from "@/lib/prisma";
 import { formatInTimeZone } from "date-fns-tz";
@@ -6,10 +11,13 @@ import { notFound } from "next/navigation";
 
 export default async function EditEvent({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ erro?: string }>;
 }) {
   const { id } = await params;
+  const { erro } = await searchParams;
   const [event, categories] = await Promise.all([
     prisma.event.findUnique({ where: { id }, include: { categories: true } }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
@@ -26,6 +34,7 @@ export default async function EditEvent({
       <AdminEventForm
         categories={categories}
         action={action}
+        error={erro}
         event={{
           slug: event.slug,
           title: event.title,
@@ -54,6 +63,23 @@ export default async function EditEvent({
           isFeatured: event.isFeatured,
         }}
       />
+      {/* fora do formulário principal: <form> não pode ficar dentro de <form> */}
+      <div className="admin-danger-zone">
+        {event.source === "sympla" ? (
+          // apagar faria o coletor trazer o evento de volta; descartar impede isso
+          <form action={rejectEventAction.bind(null, event.id)}>
+            <input type="hidden" name="voltar" value="lista" />
+            <AdminConfirmButton message="Descartar este evento? Ele sai da lista e o coletor não o traz de volta.">
+              Descartar
+            </AdminConfirmButton>
+          </form>
+        ) : (
+          <form action={deleteEventAction.bind(null, event.id)}>
+            <input type="hidden" name="voltar" value="lista" />
+            <AdminConfirmButton>Excluir</AdminConfirmButton>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

@@ -74,6 +74,7 @@ export default async function Home() {
           <EventSection
             eyebrow="ACONTECE AGORA"
             title="Hoje em Belém"
+            href="/eventos?data=hoje"
             events={today}
           />
         )}
@@ -81,6 +82,7 @@ export default async function Home() {
           <EventSection
             eyebrow="PROGRAME-SE"
             title="Amanhã"
+            href="/eventos?data=amanha"
             events={tomorrow}
           />
         )}
@@ -103,6 +105,7 @@ export default async function Home() {
           <EventSection
             eyebrow="ESCOLHAS DA CURADORIA"
             title="Destaques"
+            href="/eventos?destaque=1"
             events={featured}
           />
         )}

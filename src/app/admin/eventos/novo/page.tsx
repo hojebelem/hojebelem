@@ -2,7 +2,12 @@ import { createEventAction } from "@/app/actions";
 import { AdminEventForm } from "@/components/admin-event-form";
 import { getCategories } from "@/lib/data";
 
-export default async function NewEvent() {
+export default async function NewEvent({
+  searchParams,
+}: {
+  searchParams: Promise<{ erro?: string }>;
+}) {
+  const { erro } = await searchParams;
   const categories = await getCategories();
   return (
     <div className="admin-page shell page-space">
@@ -11,7 +16,11 @@ export default async function NewEvent() {
         <h1>Publique um rolê</h1>
         <span>Preencha o essencial. Você poderá editar depois.</span>
       </div>
-      <AdminEventForm categories={categories} action={createEventAction} />
+      <AdminEventForm
+        categories={categories}
+        action={createEventAction}
+        error={erro}
+      />
     </div>
   );
 }

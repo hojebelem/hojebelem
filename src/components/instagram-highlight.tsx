@@ -58,17 +58,6 @@ export function InstagramHighlight() {
               Seguir
             </button>
           </div>
-          <div className="instagram-stats">
-            <span>
-              <b>248</b> posts
-            </span>
-            <span>
-              <b>12,8 mil</b> seguidores
-            </span>
-            <span>
-              <b>Belém</b> acontece aqui
-            </span>
-          </div>
           <div className="instagram-posts">
             {posts.map((post) => (
               <div key={post.src}>

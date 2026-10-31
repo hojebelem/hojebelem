@@ -26,7 +26,7 @@ export function HeroSlideshow() {
   }, []);
   return (
     <>
-      <div className="hero-slides" aria-live="polite">
+      <div className="hero-slides">
         {slides.map((slide, index) => (
           <Image
             key={slide.src}

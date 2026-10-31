@@ -6,10 +6,12 @@ export function EventSection({
   title,
   eyebrow,
   events,
+  href = "/eventos",
 }: {
   title: string;
   eyebrow?: string;
   events: CardEvent[];
+  href?: string;
 }) {
   return (
     <section className="content-section">
@@ -18,7 +20,7 @@ export function EventSection({
           {eyebrow && <p>{eyebrow}</p>}
           <h2>{title}</h2>
         </div>
-        <Link href="/eventos">
+        <Link href={href}>
           Ver todos <span>→</span>
         </Link>
       </div>

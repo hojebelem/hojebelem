@@ -8,6 +8,7 @@ const errors: Record<string, string> = {
   credenciais: "E-mail ou senha incorretos. Confira e tente de novo.",
   email: "Esse e-mail já tem cadastro. Entre ou use outro e-mail.",
   dados: "Confira os dados: nome com 2+ letras e senha com 8+ caracteres.",
+  tentativas: "Muitas tentativas. Espere alguns minutos e tente de novo.",
 };
 
 export function AuthCard({
