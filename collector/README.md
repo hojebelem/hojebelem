@@ -57,9 +57,28 @@ eventos novos do coletor aparecem em até 5 minutos.
 | `COLLECTOR_AUTO_PUBLISH` | false | Publicar sem revisão do admin (por padrão entram como pendentes em `/admin/eventos`) |
 | `COLLECTOR_CITY_ID` | (busca slug `belem`) | cityId fixo opcional |
 | `COLLECTOR_CREATED_BY_ID` | (busca 1º admin) | userId fixo opcional |
-| `SYMPLA_USER_AGENT` | Chrome 126 | User-Agent das requisições |
+| `SITE_URL` | https://hojebelem.com.br | Site do projeto; entra no User-Agent do coletor |
+| `SYMPLA_USER_AGENT` | `HojeBelemBot/1.0 (+SITE_URL/contato)` | User-Agent das requisições |
 | `COLLECTOR_HTTP_TIMEOUT` | 30 | Timeout das páginas (segundos) |
 | `COLLECTOR_BFF_TIMEOUT` | 15 | Timeout das APIs BFF (segundos) |
+
+## Segurança
+
+Tudo que vem da Sympla é tratado como dado não confiável.
+
+- **Validação:** o link de compra só vale se for `https` e da Sympla; a capa só
+  vale se vier de `images.sympla.com.br` (senão entra a capa padrão); há limites
+  de tamanho de texto, de data (não pode ter começado há mais de 1 dia) e de
+  preço (0 a 100.000). Evento inválido não é gravado e vai para o log.
+- **Preço desconhecido não vira gratuito:** se os ingressos não vierem, o evento
+  fica de fora até a próxima coleta.
+- **Freio de 30%:** com 5 eventos ou mais, se mais de 30% forem inválidos, a
+  coleta não grava nada (a Sympla pode ter mudado o site).
+- **Ritmo:** 1,5 s entre páginas da listagem, 2 buscas de ingressos ao mesmo
+  tempo; um 429 da Sympla interrompe a listagem (segue com o que já baixou).
+- **Limite de 5 MB** por resposta (páginas e APIs).
+- **User-Agent identificado** (`HojeBelemBot/1.0`), com link de contato.
+- Tudo continua passando pela **revisão do admin** antes de ser publicado.
 
 ## Testes
 

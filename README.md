@@ -28,6 +28,7 @@ Se pular isso, as páginas quebram com erros como `Unknown argument` ou `EPERM`.
 
 Traz eventos de Belém da Sympla para a fila **Pendentes de revisão** do admin. Detalhes em [`collector/README.md`](collector/README.md).
 
+- Antes da primeira coleta, crie o usuário restrito do coletor no banco (depois das migrations): `docker compose exec -T postgres psql -U postgres -d hojebelem < collector/db-role.sql`. Ele só lê cidade, categorias e o papel dos usuários e só grava eventos; não lê senhas nem apaga nada.
 - Rodar uma vez: `docker compose run --rm -e COLLECTOR_INTERVAL_HOURS=0 collector`
 - Pelo `docker compose up`, o serviço `collector` fica rodando e coleta a cada 6 horas (`COLLECTOR_INTERVAL_HOURS`).
 

@@ -78,6 +78,7 @@ Regra do usuário: o site deve ser fluido **como a Sympla**, sem exagero.
 - Docker do app: build em duas etapas com `output: "standalone"` (ligado só pela variável `NEXT_STANDALONE` do Dockerfile; o `npm start` local continua normal). A CLI do Prisma para `migrate deploy` é instalada à parte em `/prisma-cli`. `.dockerignore` impede `node_modules`, `.next` e `.env` de entrarem na imagem.
 - Coletor: uma conexão com o banco para a coleta inteira (`upsert_event` aceita conexão ou URL) e busca organizador/ingressos em paralelo (`BFF_WORKERS = 5`). Teste da regra de revisão em `collector/tests/test_db_upsert.py` (precisa do Postgres local).
 - Comandos para o usuário em PowerShell (`copy`, here-strings `@" "@`), não bash.
+- Segurança do coletor: tudo da Sympla é dado não confiável. `validate_event` (link só `https` da Sympla, limites de texto/data/preço) e capa só de `images.sympla.com.br` em `normalizer.py`; preço desconhecido (`priceUnknown`) não vira gratuito; freio `should_abort` (>30% inválidos não grava nada); 1,5 s entre páginas, 2 buscas paralelas, para com 429, 5 MB por resposta (`fetch_text`/`fetch_json` em `shared.py`). O compose conecta como `hojebelem_collector` (crie com `collector/db-role.sql` depois das migrations); se o coletor precisar de tabela nova, dê o GRANT nesse arquivo.
 
 ## Verificação antes de dizer "pronto"
 

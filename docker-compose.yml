@@ -29,7 +29,8 @@ services:
       context: .
       dockerfile: collector/Dockerfile.collector
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/hojebelem
+      # usuário restrito do coletor (crie com collector/db-role.sql)
+      DATABASE_URL: postgresql://hojebelem_collector:collector_local@postgres:5432/hojebelem
       SYMPLA_BASE_URL: https://www.sympla.com.br/eventos/belem-pa
       COLLECTOR_MAX_PAGES: 5
       COLLECTOR_MAX_DAYS_AHEAD: 120

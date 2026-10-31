@@ -1,16 +1,59 @@
-"""Constantes compartilhadas pelo coletor Sympla."""
+"""Constantes e helpers HTTP compartilhados pelo coletor Sympla."""
+import json
 import os
 
-# User-Agent para requisicoes a Sympla (configuravel via env)
+import requests
+
+SITE_URL = os.environ.get("SITE_URL", "https://hojebelem.com.br")
+
+# User-Agent honesto: identifica o coletor e dá um contato (configuravel via env)
 HEADERS = {
     "User-Agent": os.environ.get(
         "SYMPLA_USER_AGENT",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/126.0.0.0 Safari/537.36",
+        f"HojeBelemBot/1.0 (+{SITE_URL}/contato)",
     )
 }
 
 # Timeouts HTTP (segundos), configuraveis via env
 HTTP_TIMEOUT = int(os.environ.get("COLLECTOR_HTTP_TIMEOUT", "30"))
 BFF_TIMEOUT = int(os.environ.get("COLLECTOR_BFF_TIMEOUT", "15"))
+
+# Tamanho maximo de resposta (paginas e APIs)
+MAX_RESPONSE_BYTES = 5 * 1024 * 1024
+CHUNK_BYTES = 64 * 1024
+
+HTTP_TOO_MANY_REQUESTS = 429
+
+
+class ResponseTooLarge(requests.RequestException):
+    """A resposta passou de MAX_RESPONSE_BYTES."""
+
+
+class RateLimited(requests.RequestException):
+    """A Sympla respondeu 429 (muitas requisicoes)."""
+
+
+def fetch_text(url: str, timeout: int) -> str:
+    """GET com limite de tamanho. Levanta RequestException em qualquer falha."""
+    with requests.get(url, headers=HEADERS, timeout=timeout, stream=True) as resp:
+        if resp.status_code == HTTP_TOO_MANY_REQUESTS:
+            raise RateLimited(f"429 em {url}")
+        resp.raise_for_status()
+
+        body = bytearray()
+        for chunk in resp.iter_content(chunk_size=CHUNK_BYTES):
+            body.extend(chunk)
+            if len(body) > MAX_RESPONSE_BYTES:
+                raise ResponseTooLarge(
+                    f"resposta maior que {MAX_RESPONSE_BYTES} bytes: {url}"
+                )
+
+        return bytes(body).decode(resp.encoding or "utf-8", errors="replace")
+
+
+def fetch_json(url: str, timeout: int):
+    """Como fetch_text, devolvendo o JSON; JSON invalido vira RequestException."""
+    try:
+        return json.loads(fetch_text(url, timeout))
+    except ValueError as error:
+        raise requests.RequestException(f"JSON invalido em {url}") from error

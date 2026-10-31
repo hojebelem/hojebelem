@@ -6,7 +6,7 @@ Fluxo completo:
   1. Baixa pagina(s) de listagem de Belem/PA
   2. Extrai eventos via Flight parser
   3. Para cada evento: busca dados BFF (organizer + tickets)
-  4. Normaliza para o schema Prisma
+  4. Normaliza para o schema Prisma e valida (freio se >30% invalidos)
   5. Classifica em categoria
   6. Upsert no banco (dedupe por externalId)
 
@@ -22,6 +22,7 @@ Variaveis de ambiente:
   COLLECTOR_AUTO_PUBLISH   publicar automaticamente (default: false; o admin revisa)
   COLLECTOR_CITY_ID        cityId fixo (opcional)
   COLLECTOR_CREATED_BY_ID  userId fixo (opcional)
+  SITE_URL                 site do projeto, vai no User-Agent (shared.py)
 """
 
 import logging
@@ -38,18 +39,18 @@ from .classifier import classify_event
 try:
     from sympla_parser import parse_sympla_list
     from sympla_bff import fetch_organizer, fetch_tickets
-    from normalizer import normalize_event
+    from normalizer import normalize_event, validate_event
     from db_upsert import upsert_event
 except ImportError:
     from .sympla_parser import parse_sympla_list
     from .sympla_bff import fetch_organizer, fetch_tickets
-    from .normalizer import normalize_event
+    from .normalizer import normalize_event, validate_event
     from .db_upsert import upsert_event
 
 try:
-    from shared import HEADERS, HTTP_TIMEOUT
+    from shared import HTTP_TIMEOUT, RateLimited, fetch_text
 except ImportError:
-    from .shared import HEADERS, HTTP_TIMEOUT
+    from .shared import HTTP_TIMEOUT, RateLimited, fetch_text
 
 
 # ── Configurações ─────────────────────────────────────────────────────────────
@@ -77,7 +78,15 @@ AUTO_PUBLISH = (
 MAX_RETRIES = 3
 
 # quantos eventos buscam organizador/ingressos ao mesmo tempo
-BFF_WORKERS = 5
+BFF_WORKERS = 2
+
+# pausa entre paginas da listagem (visitante educado)
+PAGE_DELAY_SECONDS = 1.5
+
+# freio de emergencia: com pelo menos MIN_EVENTS_FOR_ABORT eventos, mais de
+# MAX_INVALID_RATIO invalidos indica que a Sympla mudou o site
+MIN_EVENTS_FOR_ABORT = 5
+MAX_INVALID_RATIO = 0.3
 
 
 logging.basicConfig(
@@ -170,19 +179,16 @@ def lookup_ids(db_url: str) -> tuple:
 def _fetch_page(url: str) -> str:
     """
     Baixa uma página HTML com algumas tentativas de retry.
+
+    Levanta RateLimited se a Sympla responder 429 (sem retry).
     """
 
     for attempt in range(MAX_RETRIES):
         try:
-            response = requests.get(
-                url,
-                headers=HEADERS,
-                timeout=HTTP_TIMEOUT
-            )
+            return fetch_text(url, HTTP_TIMEOUT)
 
-            response.raise_for_status()
-
-            return response.text
+        except RateLimited:
+            raise
 
         except requests.RequestException as error:
             logger.warning(
@@ -209,9 +215,18 @@ def _fetch_extras(event: dict) -> tuple:
     try:
         tickets = fetch_tickets(event_id)
     except Exception:
-        tickets = {"tickets": []}
+        tickets = None  # busca falhou: preco desconhecido, fica p/ proxima coleta
 
     return organizer, tickets
+
+
+def should_abort(total: int, invalid: int) -> bool:
+    """True quando ha eventos suficientes e invalidos demais."""
+
+    return (
+        total >= MIN_EVENTS_FOR_ABORT
+        and invalid / total > MAX_INVALID_RATIO
+    )
 
 
 # ── Coleta principal ──────────────────────────────────────────────────────────
@@ -234,6 +249,7 @@ def main() -> None:
     for page in range(1, MAX_PAGES + 1):
 
         if page > 1:
+            time.sleep(PAGE_DELAY_SECONDS)
             url = f"{BASE_URL}?page={page}"
         else:
             url = BASE_URL
@@ -244,7 +260,14 @@ def main() -> None:
             url
         )
 
-        html = _fetch_page(url)
+        try:
+            html = _fetch_page(url)
+        except RateLimited:
+            logger.warning(
+                "Sympla respondeu 429 na pagina %d — seguindo com o que ja temos",
+                page
+            )
+            break
 
         if not html:
             logger.warning(
@@ -332,14 +355,43 @@ def main() -> None:
     with ThreadPoolExecutor(max_workers=BFF_WORKERS) as pool:
         extras = list(pool.map(_fetch_extras, to_process))
 
-    # ── Normalização, classificação e upsert (uma conexão só) ─────────────────
+    # ── Normalização e validação ──────────────────────────────────────────────
+
+    valid_events = []
+    invalid_count = 0
+
+    for event, (organizer, tickets) in zip(to_process, extras):
+
+        normalized = normalize_event(event, organizer, tickets)
+
+        problems = validate_event(normalized)
+
+        if problems:
+            invalid_count += 1
+            logger.warning(
+                "evento invalido %s: %s",
+                normalized["externalId"],
+                "; ".join(problems)
+            )
+            continue
+
+        valid_events.append(normalized)
+
+    if should_abort(len(to_process), invalid_count):
+        logger.error(
+            "mais de 30%% invalidos (%d de %d): a Sympla pode ter mudado "
+            "o site. Nada foi gravado nesta coleta.",
+            invalid_count,
+            len(to_process)
+        )
+        return
+
+    # ── Classificação e upsert (uma conexão só) ───────────────────────────────
 
     conn = psycopg2.connect(db_url)
 
     try:
-        for event, (organizer, tickets) in zip(to_process, extras):
-
-            normalized = normalize_event(event, organizer, tickets)
+        for normalized in valid_events:
 
             normalized["cityId"] = city_id
             normalized["createdById"] = created_by_id

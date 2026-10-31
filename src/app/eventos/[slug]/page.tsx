@@ -248,6 +248,9 @@ export default async function EventDetail({
               ? "A venda de ingressos não está mais disponível."
               : "Você será direcionado para a plataforma do organizador."}
           </small>
+          {"source" in e && e.source === "sympla" && (
+            <small>Informações e ingressos via Sympla.</small>
+          )}
         </aside>
       </div>
       <div className={`mobile-book${ended ? " mobile-book-ended" : ""}`}>
