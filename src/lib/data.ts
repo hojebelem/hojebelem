@@ -1,5 +1,25 @@
 import { prisma } from "./prisma";
 import { categories, demoEvents } from "./catalog";
+import { startOfTodayInBelem } from "./events";
+
+const eventInclude = { categories: { include: { category: true } } } as const;
+
+function toEvent<
+  T extends {
+    price: { toString(): string } | null;
+    categories: { category: { name: string; slug: string; icon: string } }[];
+  },
+>(e: T) {
+  return {
+    ...e,
+    price: e.price ? Number(e.price) : null,
+    category: e.categories[0]?.category ?? {
+      name: "Evento",
+      slug: "eventos",
+      icon: "✦",
+    },
+  };
+}
 
 export async function getEvents(query?: {
   search?: string;
@@ -11,6 +31,15 @@ export async function getEvents(query?: {
       where: {
         isPublished: true,
         city: { slug: "belem" },
+        // só eventos que ainda não acabaram, senão os antigos ocupam as 24 vagas
+        AND: [
+          {
+            OR: [
+              { endAt: { gte: new Date() } },
+              { endAt: null, startAt: { gte: startOfTodayInBelem() } },
+            ],
+          },
+        ],
         ...(query?.search
           ? {
               OR: [
@@ -42,19 +71,11 @@ export async function getEvents(query?: {
             ? { price: { not: null } }
             : {}),
       },
-      include: { categories: { include: { category: true } } },
+      include: eventInclude,
       orderBy: { startAt: "asc" },
       take: 24,
     });
-    return rows.map((e) => ({
-      ...e,
-      price: e.price ? Number(e.price) : null,
-      category: e.categories[0]?.category ?? {
-        name: "Evento",
-        slug: "eventos",
-        icon: "✦",
-      },
-    }));
+    return rows.map(toEvent);
   } catch {
     return demoEvents.filter(
       (e) =>
@@ -69,7 +90,15 @@ export async function getEvents(query?: {
   }
 }
 export async function getEvent(slug: string) {
-  return (await getEvents()).find((e) => e.slug === slug) ?? null;
+  try {
+    const row = await prisma.event.findFirst({
+      where: { slug, isPublished: true, city: { slug: "belem" } },
+      include: eventInclude,
+    });
+    return row ? toEvent(row) : null;
+  } catch {
+    return demoEvents.find((e) => e.slug === slug) ?? null;
+  }
 }
 export async function getCategories() {
   try {

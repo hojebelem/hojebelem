@@ -8,6 +8,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { saveProfileImage } from "@/lib/upload";
+import { fromZonedTime } from "date-fns-tz";
+import { TIMEZONE } from "@/lib/events";
 
 export async function loginAction(formData: FormData) {
   try {
@@ -78,8 +80,9 @@ function parseEventForm(formData: FormData) {
     values: {
       title: data.title,
       description: data.description,
-      startAt: new Date(data.startAt),
-      endAt: data.endAt ? new Date(data.endAt) : null,
+      // datetime-local não tem fuso: interpreta como horário de Belém, não do servidor
+      startAt: fromZonedTime(data.startAt, TIMEZONE),
+      endAt: data.endAt ? fromZonedTime(data.endAt, TIMEZONE) : null,
       venueName: data.venueName,
       address: data.address,
       externalPurchaseLink: data.externalPurchaseLink,

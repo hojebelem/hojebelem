@@ -4,8 +4,12 @@ Upsert de eventos no banco PostgreSQL do hojebelem.
 Insere um novo evento ou atualiza se ja existir (dedupe por externalId).
 Tambem relaciona o evento com sua categoria em EventCategory.
 """
+import logging
+
 import psycopg2
 from psycopg2 import sql
+
+logger = logging.getLogger("collector")
 
 
 def upsert_event(db_url: str, event: dict) -> bool:
@@ -41,7 +45,6 @@ def upsert_event(db_url: str, event: dict) -> bool:
                 )
                 ON CONFLICT ("externalId") DO UPDATE SET
                     title = EXCLUDED.title,
-                    slug = EXCLUDED.slug,
                     "startAt" = EXCLUDED."startAt",
                     "endAt" = EXCLUDED."endAt",
                     "venueName" = EXCLUDED."venueName",
@@ -50,7 +53,6 @@ def upsert_event(db_url: str, event: dict) -> bool:
                     "coverImageUrl" = EXCLUDED."coverImageUrl",
                     price = EXCLUDED.price,
                     description = EXCLUDED.description,
-                    "isPublished" = EXCLUDED."isPublished",
                     "updatedAt" = NOW()
                 RETURNING id
             """),
@@ -102,6 +104,7 @@ def upsert_event(db_url: str, event: dict) -> bool:
         return True
 
     except Exception:
+        logger.exception("falha no upsert de %s", event.get("externalId"))
         if conn:
             conn.rollback()
         return False

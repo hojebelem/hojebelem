@@ -1,12 +1,17 @@
-import { format, toZonedTime } from "date-fns-tz";
+import { format, fromZonedTime, toZonedTime } from "date-fns-tz";
 
 export const TIMEZONE = "America/Belem";
 export type EventOverride = "CANCELLED" | "POSTPONED" | null;
 
 export type EventTiming = { startAt: Date; endAt?: Date | null; statusOverride?: EventOverride };
 
+export function startOfTodayInBelem(now = new Date()) {
+  return fromZonedTime(`${format(toZonedTime(now, TIMEZONE), "yyyy-MM-dd")}T00:00:00`, TIMEZONE);
+}
+
 export function isEventEnded(event: EventTiming, now = new Date()) {
-  // Evento encerrado se startAt ja passou (independente de endAt)
+  // Com endAt, encerra no horário final; sem ele, ao fim do dia do início
+  if (event.endAt) return event.endAt < now;
   const eventDay = format(toZonedTime(event.startAt, TIMEZONE), "yyyy-MM-dd");
   const today = format(toZonedTime(now, TIMEZONE), "yyyy-MM-dd");
   return eventDay < today;

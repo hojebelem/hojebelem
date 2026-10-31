@@ -10,7 +10,7 @@ export const categories = [
   ["Ao ar livre", "ao-ar-livre", "🌳"], ["Passeios", "passeios", "🏖️"], ["Compras", "compras", "🛍️"],
   ["Religiosos", "religiosos", "⛪"], ["Comunitários", "comunitarios", "🤝"], ["Diversidade", "diversidade", "🏳️‍🌈"],
   ["Stand-up/Comédia", "stand-up-comedia", "🎤"], ["Podcasts/Talks", "podcasts-talks", "🎙️"], ["Dança", "danca", "💃"],
-  ["Workshops", "workshops", "🎨"], ["Cursos e experiências", "cursos-e-experiencias", "🧑‍🍳"],
+  ["Workshops", "workshops", "🎨"], ["Cursos e Experiências", "cursos-e-experiencias", "🧑‍🍳"],
 ] as const;
 
 const day = (offset: number, hour: number) => { const d = new Date(); d.setDate(d.getDate() + offset); d.setHours(hour, 0, 0, 0); return d; };
