@@ -29,7 +29,18 @@ export function ScrollRow({
     return () => observer.disconnect();
   }, [update]);
   const frame = useRef(0);
-  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  useEffect(() => {
+    const el = ref.current;
+    // se a pessoa rolar com o trackpad ou o dedo, a animação para e não briga
+    const stop = () => cancelAnimationFrame(frame.current);
+    el?.addEventListener("wheel", stop, { passive: true });
+    el?.addEventListener("touchstart", stop, { passive: true });
+    return () => {
+      stop();
+      el?.removeEventListener("wheel", stop);
+      el?.removeEventListener("touchstart", stop);
+    };
+  }, []);
   // anda uma "página" inteira e para no início de um card. Animado em JS porque
   // o Chrome no Windows desliga o scroll "smooth" nativo quando as animações do
   // sistema estão desligadas; o deslize é pedido pelo usuário, então continua.

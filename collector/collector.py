@@ -27,6 +27,7 @@ Variaveis de ambiente:
 import logging
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 import psycopg2
@@ -74,6 +75,9 @@ AUTO_PUBLISH = (
 )
 
 MAX_RETRIES = 3
+
+# quantos eventos buscam organizador/ingressos ao mesmo tempo
+BFF_WORKERS = 5
 
 
 logging.basicConfig(
@@ -192,6 +196,24 @@ def _fetch_page(url: str) -> str:
     return ""
 
 
+def _fetch_extras(event: dict) -> tuple:
+    """Organizador e ingressos de um evento; falha vira dado vazio."""
+
+    event_id = event.get("id")
+
+    try:
+        organizer = fetch_organizer(event_id)
+    except Exception:
+        organizer = {}
+
+    try:
+        tickets = fetch_tickets(event_id)
+    except Exception:
+        tickets = {"tickets": []}
+
+    return organizer, tickets
+
+
 # ── Coleta principal ──────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -275,109 +297,76 @@ def main() -> None:
 
     inserted = 0
 
-    # ── Processamento dos eventos ──────────────────────────────────────────────
+    # ── Filtra pela data ───────────────────────────────────────────────────────
+
+    to_process = []
 
     for event in all_events:
 
-        event_id = event.get("id")
-
-        if not event_id:
+        if not event.get("id"):
             continue
 
-        # Verifica data do evento
-        start_str = event.get(
-            "start_date",
-            ""
-        )
+        start_str = event.get("start_date", "")
 
         if start_str:
-
             try:
-                start_dt = datetime.fromisoformat(
-                    start_str.replace(
-                        "Z",
-                        "+00:00"
-                    )
-                )
+                start_dt = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
 
                 if start_dt > cutoff:
-
                     logger.info(
                         "pulando %s — data futura alem do limite",
                         event.get("name")
                     )
-
                     continue
 
             except ValueError:
                 pass
 
-        # ── Dados complementares ──────────────────────────────────────────────
+        to_process.append(event)
 
-        try:
-            organizer = fetch_organizer(event_id)
+    # ── Dados complementares, varios eventos ao mesmo tempo ───────────────────
+    #
+    # Cada evento faz 2 chamadas a Sympla; em fila, uma coleta grande levava
+    # minutos. Poucas threads em paralelo, para nao sobrecarregar a Sympla.
 
-        except Exception:
-            organizer = {}
+    with ThreadPoolExecutor(max_workers=BFF_WORKERS) as pool:
+        extras = list(pool.map(_fetch_extras, to_process))
 
-        try:
-            tickets = fetch_tickets(event_id)
+    # ── Normalização, classificação e upsert (uma conexão só) ─────────────────
 
-        except Exception:
-            tickets = {
-                "tickets": []
-            }
+    conn = psycopg2.connect(db_url)
 
-        # ── Normalização ──────────────────────────────────────────────────────
+    try:
+        for event, (organizer, tickets) in zip(to_process, extras):
 
-        normalized = normalize_event(
-            event,
-            organizer,
-            tickets
-        )
+            normalized = normalize_event(event, organizer, tickets)
 
-        normalized["cityId"] = city_id
-        normalized["createdById"] = created_by_id
-        normalized["isPublished"] = AUTO_PUBLISH
+            normalized["cityId"] = city_id
+            normalized["createdById"] = created_by_id
+            normalized["isPublished"] = AUTO_PUBLISH
 
-        # ── Classificação ──────────────────────────────────────────────────────
-        #
-        # Usa título + organizador para determinar
-        # a categoria do evento.
+            # Usa título + organizador para determinar a categoria do evento.
+            category_name = classify_event(
+                normalized["title"],
+                normalized.get("organizerName", "")
+            )
 
-        category_name = classify_event(
-            normalized["title"],
-            normalized.get("organizerName", "")
-        )
-
-        normalized["categoryName"] = category_name
-
-        logger.info(
-            "categoria: %s | evento: %s",
-            category_name,
-            normalized["title"]
-        )
-
-        # ── Upsert ─────────────────────────────────────────────────────────────
-
-        if upsert_event(
-            db_url,
-            normalized
-        ):
-
-            inserted += 1
+            normalized["categoryName"] = category_name
 
             logger.info(
-                "OK: %s",
+                "categoria: %s | evento: %s",
+                category_name,
                 normalized["title"]
             )
 
-        else:
+            if upsert_event(conn, normalized):
+                inserted += 1
+                logger.info("OK: %s", normalized["title"])
+            else:
+                logger.warning("FALHA: %s", normalized["title"])
 
-            logger.warning(
-                "FALHA: %s",
-                normalized["title"]
-            )
+    finally:
+        conn.close()
 
     # ── Finalização ────────────────────────────────────────────────────────────
 

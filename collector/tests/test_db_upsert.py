@@ -26,6 +26,41 @@ def test_upsert_new_event():
     assert result is True
 
 @pytest.mark.skipif(upsert_event is None, reason="upsert nao implementado")
+def test_revisado_mantem_textos_do_admin():
+    """Depois que o admin revisa, a coleta so muda data, preco e link."""
+    import psycopg2
+    try:
+        conn = psycopg2.connect(DB_URL)
+    except psycopg2.OperationalError:
+        pytest.skip("banco local indisponivel")
+    cur = conn.cursor()
+    cur.execute('SELECT id FROM "City" WHERE slug = %s', ("belem",))
+    city_id = cur.fetchone()[0]
+    cur.execute('SELECT id FROM "User" WHERE role = %s LIMIT 1', ("ADMIN",))
+    admin_id = cur.fetchone()[0]
+    ext = "test-review-1"
+    ev = {**EVENT, "externalId": ext, "slug": ext, "cityId": city_id,
+          "createdById": admin_id, "isPublished": False}
+    try:
+        assert upsert_event(conn, ev) is True
+        cur.execute('UPDATE "Event" SET title = %s, "reviewedAt" = NOW() '
+                    'WHERE "externalId" = %s', ("Titulo do admin", ext))
+        conn.commit()
+
+        assert upsert_event(conn, {**ev, "title": "Titulo da Sympla",
+                                   "price": 99, "isPublished": True}) is True
+        cur.execute('SELECT title, price, "isPublished" FROM "Event" '
+                    'WHERE "externalId" = %s', (ext,))
+        title, price, published = cur.fetchone()
+        assert title == "Titulo do admin"
+        assert float(price) == 99
+        assert published is False
+    finally:
+        cur.execute('DELETE FROM "Event" WHERE "externalId" = %s', (ext,))
+        conn.commit()
+        conn.close()
+
+@pytest.mark.skipif(upsert_event is None, reason="upsert nao implementado")
 def test_upsert_duplicate():
     """Mesmo externalId deve fazer update, nao inserir duplicata."""
     result = upsert_event(DB_URL, EVENT)

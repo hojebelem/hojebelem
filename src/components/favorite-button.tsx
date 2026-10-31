@@ -2,6 +2,18 @@ import { toggleWishlistAction } from "@/app/actions";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Heart } from "lucide-react";
+import { cache } from "react";
+
+// uma consulta por página (cache() vale durante a requisição), não uma por card
+const getSavedEventIds = cache(async () => {
+  const session = await auth();
+  if (!session?.user?.id) return new Set<string>();
+  const rows = await prisma.wishlist.findMany({
+    where: { userId: session.user.id },
+    select: { eventId: true },
+  });
+  return new Set(rows.map((row) => row.eventId));
+});
 
 export async function FavoriteButton({
   eventId,
@@ -10,14 +22,7 @@ export async function FavoriteButton({
   eventId: string;
   className?: string;
 }) {
-  const session = await auth();
-  const saved = session?.user?.id
-    ? Boolean(
-        await prisma.wishlist.findUnique({
-          where: { userId_eventId: { userId: session.user.id, eventId } },
-        }),
-      )
-    : false;
+  const saved = (await getSavedEventIds()).has(eventId);
   const action = toggleWishlistAction.bind(null, eventId);
   return (
     <form action={action} className="favorite-form">

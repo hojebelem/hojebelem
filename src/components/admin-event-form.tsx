@@ -116,7 +116,7 @@ export function AdminEventForm({
           <input
             type="text"
             name="coverImageUrl"
-            defaultValue={event?.coverImageUrl ?? "/images/hero-belem.png"}
+            defaultValue={event?.coverImageUrl ?? "/images/hero-belem.webp"}
             placeholder="https://... ou /images/..."
           />
         </label>

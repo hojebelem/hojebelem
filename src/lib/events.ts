@@ -5,27 +5,30 @@ export type EventOverride = "CANCELLED" | "POSTPONED" | null;
 
 export type EventTiming = { startAt: Date; endAt?: Date | null; statusOverride?: EventOverride };
 
+// "yyyy-MM-dd" do dia em Belém; texto nesse formato compara certo com < e ===
+function dayInBelem(date: Date) {
+  return format(toZonedTime(date, TIMEZONE), "yyyy-MM-dd");
+}
+
 export function startOfTodayInBelem(now = new Date()) {
-  return fromZonedTime(`${format(toZonedTime(now, TIMEZONE), "yyyy-MM-dd")}T00:00:00`, TIMEZONE);
+  return fromZonedTime(`${dayInBelem(now)}T00:00:00`, TIMEZONE);
 }
 
 export function isEventEnded(event: EventTiming, now = new Date()) {
   // Com endAt, encerra no horário final; sem ele, ao fim do dia do início
   if (event.endAt) return event.endAt < now;
-  const eventDay = format(toZonedTime(event.startAt, TIMEZONE), "yyyy-MM-dd");
-  const today = format(toZonedTime(now, TIMEZONE), "yyyy-MM-dd");
-  return eventDay < today;
+  return dayInBelem(event.startAt) < dayInBelem(now);
 }
 
 export function getEventStatus(event: EventTiming, now = new Date()) {
   if (event.statusOverride === "CANCELLED") return "Cancelado";
   if (event.statusOverride === "POSTPONED") return "Adiado";
   if (isEventEnded(event, now)) return "Já encerrou";
-  const eventDay = format(toZonedTime(event.startAt, TIMEZONE), "yyyy-MM-dd");
-  const today = format(toZonedTime(now, TIMEZONE), "yyyy-MM-dd");
-  const tomorrow = format(toZonedTime(new Date(now.getTime() + 86_400_000), TIMEZONE), "yyyy-MM-dd");
-  if (eventDay < today) return "É Hoje";
-  if (eventDay === today) return "É Hoje";
+  const eventDay = dayInBelem(event.startAt);
+  const today = dayInBelem(now);
+  const tomorrow = dayInBelem(new Date(now.getTime() + 86_400_000));
+  // começou antes e ainda não acabou (evento de vários dias) também é "hoje"
+  if (eventDay <= today) return "É Hoje";
   if (eventDay === tomorrow) return "É amanhã";
   return "Em breve";
 }

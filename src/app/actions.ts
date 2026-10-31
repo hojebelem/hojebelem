@@ -4,7 +4,8 @@ import { signIn } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { EVENTS_TAG } from "@/lib/data";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { saveProfileImage } from "@/lib/upload";
@@ -103,7 +104,7 @@ function parseEventForm(formData: FormData) {
       address: data.address,
       externalPurchaseLink: data.externalPurchaseLink,
       socialLink: data.socialLink || null,
-      coverImageUrl: data.coverImageUrl || "/images/hero-belem.png",
+      coverImageUrl: data.coverImageUrl || "/images/hero-belem.webp",
       price: data.price ? Number(data.price) : null,
       statusOverride: data.status === "AUTOMATIC" ? null : data.status,
       isPublished: formData.get("published") === "on",
@@ -113,6 +114,8 @@ function parseEventForm(formData: FormData) {
 }
 
 function revalidateEventPages(slug?: string) {
+  // limpa o cache de eventos na hora, para o admin ver a mudança
+  updateTag(EVENTS_TAG);
   revalidatePath("/");
   revalidatePath("/eventos");
   revalidatePath("/explorar");
@@ -160,22 +163,23 @@ export async function updateEventAction(id: string, formData: FormData) {
   redirect("/admin/eventos");
 }
 
+// updateMany: se outro admin já apagou o evento, não quebra a página
 export async function approveEventAction(id: string) {
   await requireAdmin();
-  const event = await prisma.event.update({
+  await prisma.event.updateMany({
     where: { id },
     data: { isPublished: true, reviewedAt: new Date() },
   });
-  revalidateEventPages(event.slug);
+  revalidateEventPages();
 }
 
 export async function rejectEventAction(id: string) {
   await requireAdmin();
-  const event = await prisma.event.update({
+  await prisma.event.updateMany({
     where: { id },
     data: { isPublished: false, rejectedAt: new Date() },
   });
-  revalidateEventPages(event.slug);
+  revalidateEventPages();
 }
 
 export async function toggleEventPublishedAction(id: string) {
@@ -193,13 +197,11 @@ export async function toggleWishlistAction(eventId: string) {
   const session = await auth();
   if (!session?.user?.id)
     redirect(`/login?callbackUrl=${encodeURIComponent("/wishlist")}`);
-  const key = { userId_eventId: { userId: session.user.id, eventId } };
-  const existing = await prisma.wishlist.findUnique({ where: key });
-  if (existing) await prisma.wishlist.delete({ where: key });
-  else
-    await prisma.wishlist.create({
-      data: { userId: session.user.id, eventId },
-    });
+  // sem "confere e depois cria": clique duplo não pode gerar favorito repetido
+  const where = { userId: session.user.id, eventId };
+  const removed = await prisma.wishlist.deleteMany({ where });
+  if (removed.count === 0)
+    await prisma.wishlist.createMany({ data: [where], skipDuplicates: true });
   revalidatePath("/");
   revalidatePath("/eventos");
   revalidatePath("/explorar");

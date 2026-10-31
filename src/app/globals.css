@@ -1847,7 +1847,7 @@ button {
   padding: 50px 20px;
   background:
     linear-gradient(rgba(15, 7, 35, 0.72), rgba(32, 28, 87, 0.86)),
-    url("/images/hero-belem.png") center/cover;
+    url("/images/hero-belem.webp") center/cover;
 }
 .auth-card {
   width: min(470px, 100%);

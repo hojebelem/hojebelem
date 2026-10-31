@@ -2,12 +2,12 @@ import Image from "next/image";
 import { Camera, MapPin } from "lucide-react";
 
 const posts = [
-  { src: "/images/hero-musica.png", alt: "Show em Belém" },
+  { src: "/images/hero-musica.webp", alt: "Show em Belém" },
   {
-    src: "/images/hero-gastronomia.png",
+    src: "/images/hero-gastronomia.webp",
     alt: "Experiência gastronômica em Belém",
   },
-  { src: "/images/hero-belem.png", alt: "Evento cultural em Belém" },
+  { src: "/images/hero-belem.webp", alt: "Evento cultural em Belém" },
 ];
 
 export function InstagramHighlight() {
@@ -79,7 +79,7 @@ export function InstagramHighlight() {
         </div>
         <div className="mini-post">
           <Image
-            src="/images/hero-musica.png"
+            src="/images/hero-musica.webp"
             alt="Registro de música ao vivo"
             fill
             sizes="170px"

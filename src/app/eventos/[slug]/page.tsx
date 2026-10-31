@@ -19,6 +19,7 @@ import {
 import { ShareButton } from "@/components/share-button";
 import { FavoriteButton } from "@/components/favorite-button";
 import { GoogleAdSlot } from "@/components/google-ads";
+import { isOptimizableImage } from "@/lib/images";
 
 export async function generateMetadata({
   params,
@@ -52,6 +53,7 @@ export default async function EventDetail({
       <div className="detail-cover">
         <Image
           src={e.coverImageUrl}
+          unoptimized={!isOptimizableImage(e.coverImageUrl)}
           alt={`Capa de ${e.title}`}
           fill
           preload

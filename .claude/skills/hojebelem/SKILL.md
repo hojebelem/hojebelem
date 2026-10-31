@@ -47,6 +47,10 @@ Regra do usuário: o site deve ser fluido **como a Sympla**, sem exagero.
 - `getEvents` só traz eventos publicados que ainda não acabaram (com `endAt`, até o horário final; sem ele, até o fim do dia). Detalhe do evento busca direto pelo `slug`.
 - Status exibidos: "É Hoje", "É amanhã", "Em breve", "Já encerrou", "Adiado", "Cancelado".
 - Preço `null` = gratuito.
+- **Cache de dados** (`src/lib/data.ts`): eventos (5 min) e categorias (10 min) ficam em `unstable_cache` com as tags `events` e `categories`. Toda ação do admin que muda evento chama `updateTag(EVENTS_TAG)` (via `revalidateEventPages`). O cache guarda JSON: datas voltam como texto e passam por `reviveDates`. O coletor grava direto no banco, então os eventos dele aparecem em até 5 minutos.
+- Favoritos da página: `getSavedEventIds` (uma consulta por requisição). Não volte a consultar por card.
+- Imagem de capa de domínio fora de `images.remotePatterns` usa `unoptimized` (`isOptimizableImage` em `src/lib/images.ts`), senão o Next derruba a página. As duas listas de domínios precisam ficar iguais.
+- Imagens do site em WebP (`public/images/*.webp`). Os `.png` antigos só existem para eventos já salvos no banco com esse caminho.
 
 ## Fluxo de revisão do coletor
 
@@ -61,6 +65,8 @@ Regra do usuário: o site deve ser fluido **como a Sympla**, sem exagero.
 - Mudou o `schema.prisma`: `npx prisma migrate dev --name <nome>`. **Pare o `npm run dev` antes** e rode `npx prisma generate`, senão dá `EPERM` (o servidor trava a DLL do Prisma) e as páginas quebram com "Unknown argument".
 - Seed (`npm run db:seed`) cria cidade `belem`, categorias, admin `admin@hojebelem.local` e eventos de exemplo; atualiza nome/ícone das categorias.
 - Postgres local: `docker compose up -d postgres`. App em `http://localhost:3000`.
+- Docker do app: build em duas etapas com `output: "standalone"` (ligado só pela variável `NEXT_STANDALONE` do Dockerfile; o `npm start` local continua normal). A CLI do Prisma para `migrate deploy` é instalada à parte em `/prisma-cli`. `.dockerignore` impede `node_modules`, `.next` e `.env` de entrarem na imagem.
+- Coletor: uma conexão com o banco para a coleta inteira (`upsert_event` aceita conexão ou URL) e busca organizador/ingressos em paralelo (`BFF_WORKERS = 5`). Teste da regra de revisão em `collector/tests/test_db_upsert.py` (precisa do Postgres local).
 - Comandos para o usuário em PowerShell (`copy`, here-strings `@" "@`), não bash.
 
 ## Verificação antes de dizer "pronto"

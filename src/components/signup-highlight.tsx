@@ -27,7 +27,7 @@ export async function SignupHighlight() {
       <div className="signup-visual">
         <div className="signup-photo">
           <Image
-            src="/images/hero-gastronomia.png"
+            src="/images/hero-gastronomia.webp"
             alt="Amigos vivendo uma experiência em Belém"
             fill
             sizes="420px"

@@ -12,17 +12,22 @@ from psycopg2 import sql
 logger = logging.getLogger("collector")
 
 
-def upsert_event(db_url: str, event: dict) -> bool:
-    """Insere/atualiza um evento e relaciona sua categoria."""
+def upsert_event(db, event: dict) -> bool:
+    """Insere/atualiza um evento e relaciona sua categoria.
+
+    `db` pode ser a URL do banco (abre e fecha uma conexao) ou uma conexao
+    ja aberta, reaproveitada pela coleta inteira.
+    """
 
     if not event.get("externalId"):
         return False
 
+    own_conn = isinstance(db, str)
     conn = None
     cur = None
 
     try:
-        conn = psycopg2.connect(db_url)
+        conn = psycopg2.connect(db) if own_conn else db
         cur = conn.cursor()
 
         # 1. Insere ou atualiza o evento.
@@ -119,5 +124,5 @@ def upsert_event(db_url: str, event: dict) -> bool:
     finally:
         if cur:
             cur.close()
-        if conn:
+        if conn and own_conn:
             conn.close()

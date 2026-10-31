@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { isOptimizableImage } from "@/lib/images";
 
 export type HeroEvent = {
   id: string;
@@ -86,6 +87,7 @@ export function HeroCarousel({ events }: { events: HeroEvent[] }) {
             >
               <Image
                 src={event.coverImageUrl}
+                unoptimized={!isOptimizableImage(event.coverImageUrl)}
                 alt={center ? `Capa do evento ${event.title}` : ""}
                 fill
                 sizes="(max-width: 800px) 90vw, 460px"

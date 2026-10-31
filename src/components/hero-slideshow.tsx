@@ -5,12 +5,12 @@ import { useEffect, useState } from "react";
 
 const slides = [
   {
-    src: "/images/hero-belem.png",
+    src: "/images/hero-belem.webp",
     alt: "Evento cultural à beira-rio em Belém",
   },
-  { src: "/images/hero-musica.png", alt: "Show de música ao vivo em Belém" },
+  { src: "/images/hero-musica.webp", alt: "Show de música ao vivo em Belém" },
   {
-    src: "/images/hero-gastronomia.png",
+    src: "/images/hero-gastronomia.webp",
     alt: "Festival de gastronomia ao pôr do sol em Belém",
   },
 ];

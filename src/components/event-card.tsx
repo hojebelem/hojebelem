@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { formatEventFullDate, getEventStatus } from "@/lib/events";
 import { FavoriteButton } from "@/components/favorite-button";
+import { isOptimizableImage } from "@/lib/images";
 export type CardEvent = {
   id: string;
   slug: string;
@@ -24,6 +25,7 @@ export function EventCard({ event }: { event: CardEvent }) {
         <Link href={`/eventos/${event.slug}`} className="event-image-link">
           <Image
             src={event.coverImageUrl}
+            unoptimized={!isOptimizableImage(event.coverImageUrl)}
             alt={`Capa do evento ${event.title}`}
             fill
             sizes="(max-width: 768px) 82vw, 360px"
