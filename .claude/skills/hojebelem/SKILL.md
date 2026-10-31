@@ -95,4 +95,4 @@ Regra do usuário: o site deve ser fluido **como a Sympla**, sem exagero.
 
 ## Pendências
 
-O que falta no site está em `RELATORIO.md` (itens numerados por bloco). Ao concluir um item, marque como ✅ lá.
+O que falta no site está em `RELATORIO.md`, arquivo só local (fica no `.gitignore`, não vai para o repositório; itens numerados por bloco). Ao concluir um item, marque como ✅ lá.

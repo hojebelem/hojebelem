@@ -40,5 +40,3 @@ Traz eventos de Belém da Sympla para a fila **Pendentes de revisão** do admin.
 ## Produção
 
 Configure `DATABASE_URL` com a conexão PostgreSQL do Railway, além de `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL` e as credenciais Google OAuth. O `Dockerfile` gera um build enxuto e roda `prisma migrate deploy` ao iniciar.
-
-O que ainda falta no site está em `RELATORIO.md`.
