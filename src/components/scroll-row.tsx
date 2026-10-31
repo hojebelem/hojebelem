@@ -14,10 +14,12 @@ export function ScrollRow({
   const update = useCallback(() => {
     const el = ref.current;
     if (!el) return;
-    setEdge({
-      left: el.scrollLeft > 4,
-      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
-    });
+    const left = el.scrollLeft > 4;
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+    // só re-renderiza quando uma seta aparece ou some, não a cada quadro da rolagem
+    setEdge((prev) =>
+      prev.left === left && prev.right === right ? prev : { left, right },
+    );
   }, []);
   useEffect(() => {
     const el = ref.current;
@@ -28,7 +30,9 @@ export function ScrollRow({
   }, [update]);
   const frame = useRef(0);
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
-  // anda uma "página" inteira e para no início de um card, com easing suave
+  // anda uma "página" inteira e para no início de um card. Animado em JS porque
+  // o Chrome no Windows desliga o scroll "smooth" nativo quando as animações do
+  // sistema estão desligadas; o deslize é pedido pelo usuário, então continua.
   const go = (direction: 1 | -1) => {
     const el = ref.current;
     const items = el ? ([...el.children] as HTMLElement[]) : [];
@@ -42,12 +46,11 @@ export function ScrollRow({
     const moved = direction === 1 ? snapped > el.scrollLeft + 4 : snapped < el.scrollLeft - 4;
     const to = Math.max(0, Math.min(max, moved ? snapped : raw));
     const from = el.scrollLeft;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const duration = reduce ? 0 : 800;
+    const duration = 700;
     const start = performance.now();
     cancelAnimationFrame(frame.current);
     const step = (now: number) => {
-      const t = duration ? Math.min(1, (now - start) / duration) : 1;
+      const t = Math.min(1, (now - start) / duration);
       const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
       el.scrollLeft = from + (to - from) * eased;
       if (t < 1) frame.current = requestAnimationFrame(step);

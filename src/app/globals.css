@@ -103,68 +103,6 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(#9043d5, #682179) padding-box;
 }
-.custom-cursor {
-  display: none;
-}
-@media (pointer: fine) {
-  body,
-  a,
-  button,
-  input,
-  textarea,
-  select {
-    cursor: none;
-  }
-  .custom-cursor {
-    display: block;
-  }
-  .cursor-ring,
-  .cursor-dot {
-    position: fixed;
-    z-index: 9999;
-    top: 0;
-    left: 0;
-    pointer-events: none;
-    opacity: 0;
-    will-change: transform;
-  }
-  .cursor-ring {
-    width: 38px;
-    height: 38px;
-    margin: -19px 0 0 -19px;
-    border: 1px solid rgba(144, 67, 213, 0.72);
-    border-radius: 50%;
-    background: rgba(199, 163, 210, 0.08);
-    box-shadow: 0 0 18px rgba(144, 67, 213, 0.2);
-    backdrop-filter: blur(2px);
-    transition:
-      width 0.2s,
-      height 0.2s,
-      margin 0.2s,
-      background 0.2s,
-      border-color 0.2s,
-      opacity 0.2s;
-  }
-  .cursor-dot {
-    width: 5px;
-    height: 5px;
-    margin: -2.5px 0 0 -2.5px;
-    border-radius: 50%;
-    background: #9043d5;
-    transition: opacity 0.2s;
-  }
-  .custom-cursor-visible .cursor-ring,
-  .custom-cursor-visible .cursor-dot {
-    opacity: 1;
-  }
-  .cursor-ring.cursor-hover {
-    width: 54px;
-    height: 54px;
-    margin: -27px 0 0 -27px;
-    border-color: rgba(182, 1, 187, 0.75);
-    background: rgba(144, 67, 213, 0.14);
-  }
-}
 body {
   margin: 0;
   background: var(--paper);
@@ -432,13 +370,24 @@ button {
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 24px 50px rgba(0, 0, 0, 0.45);
+  /* só transform e opacity: o navegador anima na placa de vídeo */
+  will-change: transform, opacity;
   transition:
     transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1),
-    opacity 0.7s ease,
-    filter 0.7s ease;
+    opacity 0.7s ease;
 }
-.coverflow-card:not(.is-active) {
-  filter: brightness(0.7);
+/* escurece os cards de fundo com uma camada, em vez de filter (pesado de animar) */
+.coverflow-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #0b0618;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.7s ease;
+}
+.coverflow-card:not(.is-active)::after {
+  opacity: 0.35;
 }
 .coverflow-card img {
   object-fit: cover;
@@ -2592,36 +2541,17 @@ button {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+/* Com "menos movimento" ligado no sistema, só as animações decorativas em loop
+   param. As transições curtas de interação (hover, slides, carrossel, busca)
+   continuam, como em sites como a Sympla. */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    scroll-behavior: auto !important;
-    transition: none !important;
-  }
   .hero-slide,
   .footer-confetti span,
   .mini-post,
   .social-float,
-  .instagram-decoration span {
-    animation: none !important;
-    transition: none !important;
-  }
+  .instagram-decoration span,
   .signup-event-card,
   .signup-floating-icons span {
     animation: none !important;
-  }
-  .custom-cursor {
-    display: none !important;
-  }
-  body,
-  a,
-  button,
-  input,
-  textarea,
-  select {
-    cursor: auto;
-  }
-  button,
-  a {
-    cursor: pointer;
   }
 }

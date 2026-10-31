@@ -4,7 +4,6 @@ import "./globals.css";
 import { Header } from "@/components/header";
 import { BottomNav } from "@/components/bottom-nav";
 import { Footer } from "@/components/footer";
-import { CustomCursor } from "@/components/custom-cursor";
 import { AdSenseScript } from "@/components/google-ads";
 
 const manrope = Manrope({
@@ -30,7 +29,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="pt-BR" className={manrope.variable}>
       <body>
         <AdSenseScript />
-        <CustomCursor />
         <Header />
         <main>{children}</main>
         <Footer />
