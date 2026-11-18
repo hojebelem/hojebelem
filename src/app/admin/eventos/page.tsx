@@ -6,6 +6,7 @@ import {
   toggleEventPublishedAction,
 } from "@/app/actions";
 import { AdminConfirmButton } from "@/components/admin-confirm-button";
+import { isCollectorSource } from "@/lib/events";
 import { prisma } from "@/lib/prisma";
 import { requireAdminPage } from "@/lib/session";
 import type { Prisma } from "@prisma/client";
@@ -61,7 +62,7 @@ function listHref(q: string, status: Status, pagina = 1) {
 
 // evento do coletor apagado voltaria na próxima coleta; para ele só "Descartar"
 function RemoveButton({ event }: { event: EventRow }) {
-  if (event.source === "sympla")
+  if (isCollectorSource(event.source))
     return (
       <form action={rejectEventAction.bind(null, event.id)}>
         <button type="submit">Descartar</button>
@@ -127,7 +128,7 @@ function EventListRow({ event }: { event: EventRow }) {
         )}
         <Link href={`/admin/eventos/${event.id}/editar`}>Editar</Link>
         {/* descartado do coletor fica guardado, senão a coleta o traria de volta */}
-        {!(discarded && event.source === "sympla") && (
+        {!(discarded && isCollectorSource(event.source)) && (
           <RemoveButton event={event} />
         )}
       </div>

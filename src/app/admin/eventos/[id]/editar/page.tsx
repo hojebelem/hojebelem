@@ -5,6 +5,7 @@ import {
 } from "@/app/actions";
 import { AdminConfirmButton } from "@/components/admin-confirm-button";
 import { AdminEventForm } from "@/components/admin-event-form";
+import { isCollectorSource } from "@/lib/events";
 import { prisma } from "@/lib/prisma";
 import { requireAdminPage } from "@/lib/session";
 import { formatInTimeZone } from "date-fns-tz";
@@ -67,7 +68,7 @@ export default async function EditEvent({
       />
       {/* fora do formulário principal: <form> não pode ficar dentro de <form> */}
       <div className="admin-danger-zone">
-        {event.source === "sympla" ? (
+        {isCollectorSource(event.source) ? (
           // apagar faria o coletor trazer o evento de volta; descartar impede isso
           <form action={rejectEventAction.bind(null, event.id)}>
             <input type="hidden" name="voltar" value="lista" />

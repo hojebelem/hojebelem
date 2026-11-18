@@ -14,6 +14,7 @@ import {
   formatEventTime,
   getEventStatus,
   isEventEnded,
+  SOURCE_LABELS,
 } from "@/lib/events";
 import { ShareButton } from "@/components/share-button";
 import { BackButton } from "@/components/back-button";
@@ -257,8 +258,8 @@ export default async function EventDetail({
               ? "A venda de ingressos não está mais disponível."
               : "Você será direcionado para a plataforma do organizador."}
           </small>
-          {"source" in e && e.source === "sympla" && (
-            <small>Informações e ingressos via Sympla.</small>
+          {"source" in e && e.source && SOURCE_LABELS[e.source] && (
+            <small>Informações e ingressos via {SOURCE_LABELS[e.source]}.</small>
           )}
         </aside>
       </div>

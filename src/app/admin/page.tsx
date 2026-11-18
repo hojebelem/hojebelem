@@ -18,6 +18,10 @@ const pendingWhere = {
   rejectedAt: null,
 };
 
+const collectorWhere = {
+  source: { notIn: ["manual", "organizador"] },
+};
+
 const collectionFormat = new Intl.DateTimeFormat("pt-BR", {
   timeZone: "America/Belem",
   day: "2-digit",
@@ -62,10 +66,10 @@ export default async function Admin() {
       take: 5,
     }),
     prisma.event.aggregate({
-      where: { source: "sympla" },
+      where: collectorWhere,
       _max: { updatedAt: true },
     }),
-    prisma.event.count({ where: { ...pendingWhere, source: "sympla" } }),
+    prisma.event.count({ where: { ...pendingWhere, ...collectorWhere } }),
   ]);
   const lastRun = lastCollection._max.updatedAt;
   const stats = [
@@ -102,7 +106,7 @@ export default async function Admin() {
         </p>
       )}
       <section className="admin-collector">
-        <h2>Coletor da Sympla</h2>
+        <h2>Coletor automático</h2>
         <p>
           Última coleta:{" "}
           <b>{lastRun ? formatCollection(lastRun) : "Nenhuma coleta ainda"}</b>

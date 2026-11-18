@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eventDateRange, getEventStatus, isEventEnded, startOfTodayInBelem } from "./events";
+import { eventDateRange, getEventStatus, isCollectorSource, isEventEnded, startOfTodayInBelem } from "./events";
 const now = new Date("2026-08-14T12:00:00-03:00");
 describe("getEventStatus em America/Belem",()=>{
   it("calcula datas e respeita overrides",()=>{
@@ -41,5 +41,15 @@ describe("eventDateRange",()=>{
   it("valor desconhecido não filtra",()=>{
     expect(eventDateRange("qualquer",now)).toBeNull();
     expect(eventDateRange(undefined,now)).toBeNull();
+  });
+});
+
+describe("isCollectorSource", () => {
+  it("diferencia origens automatizadas de manual/organizador", () => {
+    expect(isCollectorSource("sympla")).toBe(true);
+    expect(isCollectorSource("shotgun")).toBe(true);
+    expect(isCollectorSource("manual")).toBe(false);
+    expect(isCollectorSource("organizador")).toBe(false);
+    expect(isCollectorSource(null)).toBe(false);
   });
 });

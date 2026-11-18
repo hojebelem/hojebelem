@@ -3,6 +3,15 @@ import { format, fromZonedTime, toZonedTime } from "date-fns-tz";
 export const TIMEZONE = "America/Belem";
 export type EventOverride = "CANCELLED" | "POSTPONED" | null;
 
+export const SOURCE_LABELS: Record<string, string> = {
+  sympla: "Sympla",
+  shotgun: "Shotgun",
+};
+
+export function isCollectorSource(source: string | null | undefined) {
+  return Boolean(source && source !== "manual" && source !== "organizador");
+}
+
 export type EventTiming = { startAt: Date; endAt?: Date | null; statusOverride?: EventOverride };
 
 // "yyyy-MM-dd" do dia em Belém; texto nesse formato compara certo com < e ===

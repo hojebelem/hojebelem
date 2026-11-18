@@ -1,8 +1,7 @@
 """
-Normalizador de eventos da Sympla para o schema Prisma do hojebelem.
+Normalizador e validador de eventos para o schema Prisma do hojebelem.
 
-Converte o dict do parser (payload Flight) + dados das APIs BFF (organizer
-+ tickets) em um dict pronto para upsert no banco.
+Mantem validacao generica (para todas as fontes) e normalizacao da Sympla.
 """
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
@@ -38,6 +37,14 @@ def _format_address(loc: dict) -> str:
     return " - ".join(part for part in (street, neighborhood) if part)
 
 
+def make_external_id(source: str, raw_id) -> str:
+    """Preserva IDs legados da Sympla e prefixa novas fontes para evitar colisao."""
+    text = str(raw_id or "").strip()
+    if not text:
+        return ""
+    return text if source == "sympla" else f"{source}:{text}"
+
+
 def _price_of(ticket: dict):
     """Preco (decimal) de um ingresso, ou None se ausente/invalido."""
     price = ticket.get("salePriceWithDiscountMonetary") or ticket.get("salePriceMonetary")
@@ -62,12 +69,15 @@ def parse_price(tickets: dict | None) -> float | None:
 _parse_price = parse_price
 
 
-def _safe_cover(url) -> str:
-    """So aceita capa https servida por images.sympla.com.br."""
+def safe_cover(url, allowed_hosts: tuple[str, ...] = (COVER_HOST,)) -> str:
+    """So aceita capa https servida pelos hosts confiaveis da fonte."""
     parsed = urlparse(_text(url))
-    if parsed.scheme == "https" and parsed.hostname == COVER_HOST:
+    if parsed.scheme == "https" and (parsed.hostname or "") in allowed_hosts:
         return parsed.geturl()
     return DEFAULT_COVER
+
+
+_safe_cover = safe_cover
 
 
 def normalize_event(raw: dict, organizer: dict, tickets: dict | None) -> dict:
@@ -82,7 +92,7 @@ def normalize_event(raw: dict, organizer: dict, tickets: dict | None) -> dict:
     return {
         "title": _clean_title(_text(raw.get("name", ""))),
         "slug": f"sympla-{raw.get('id', '')}",  # sympla-<id> p/ evitar colisao com slugs do seed
-        "externalId": str(raw.get("id", "")),
+        "externalId": make_external_id("sympla", raw.get("id")),
         "source": "sympla",
         "startAt": raw.get("start_date"),
         "endAt": raw.get("end_date"),
@@ -91,7 +101,7 @@ def normalize_event(raw: dict, organizer: dict, tickets: dict | None) -> dict:
         "latitude": loc.get("lat"),
         "longitude": loc.get("lon"),
         "externalPurchaseLink": _text(raw.get("url", "")),
-        "coverImageUrl": _safe_cover(imgs.get("original")),
+        "coverImageUrl": safe_cover(imgs.get("original")),
         "price": parse_price(tickets),
         "priceUnknown": price_unknown,
         "description": f"Organizado por {org_name}".strip(),
@@ -111,21 +121,25 @@ def _parse_date(value) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
-def _valid_link(link) -> bool:
+def _valid_link(link, allowed_hosts: tuple[str, ...] = (LINK_HOST,)) -> bool:
     parsed = urlparse(link or "")
     host = parsed.hostname or ""
-    return parsed.scheme == "https" and (
-        host == LINK_HOST or host.endswith("." + LINK_HOST)
+    return parsed.scheme == "https" and any(
+        host == allowed or host.endswith("." + allowed) for allowed in allowed_hosts
     )
 
 
-def validate_event(event: dict, now: datetime | None = None) -> list[str]:
+def validate_event(
+    event: dict,
+    now: datetime | None = None,
+    allowed_hosts: tuple[str, ...] = (LINK_HOST,),
+) -> list[str]:
     """Lista de problemas do evento normalizado (vazia = pode gravar)."""
     now = now or datetime.now(timezone.utc)
     problems = []
 
-    if not _valid_link(event.get("externalPurchaseLink")):
-        problems.append("link de compra nao e https da Sympla")
+    if not _valid_link(event.get("externalPurchaseLink"), allowed_hosts):
+        problems.append("link de compra invalido ou fora do dominio permitido")
 
     for field, label, limit in (
         ("title", "titulo", MAX_TITLE),
