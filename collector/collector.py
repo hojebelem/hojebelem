@@ -9,20 +9,6 @@ Fluxo completo:
   4. Normaliza para o schema Prisma e valida (freio se >30% invalidos)
   5. Classifica em categoria
   6. Upsert no banco (dedupe por externalId)
-
-Execucao:
-  export DATABASE_URL="postgresql://usuario:***@host:5432/hojebelem"
-  python3 -m collector.collector   (da raiz do projeto)
-
-Variaveis de ambiente:
-  DATABASE_URL             conexao PostgreSQL
-  SYMPLA_BASE_URL          URL de listagem
-  COLLECTOR_MAX_PAGES      max paginas por coleta (default: 5)
-  COLLECTOR_MAX_DAYS_AHEAD dias no futuro a coletar (default: 120)
-  COLLECTOR_AUTO_PUBLISH   publicar automaticamente (default: false; o admin revisa)
-  COLLECTOR_CITY_ID        cityId fixo (opcional)
-  COLLECTOR_CREATED_BY_ID  userId fixo (opcional)
-  SITE_URL                 site do projeto, vai no User-Agent (shared.py)
 """
 
 import logging
@@ -40,12 +26,12 @@ try:
     from sympla_parser import parse_sympla_list
     from sympla_bff import fetch_organizer, fetch_tickets
     from normalizer import normalize_event, validate_event
-    from db_upsert import upsert_event
+    from db_upsert import load_category_map, upsert_event
 except ImportError:
     from .sympla_parser import parse_sympla_list
     from .sympla_bff import fetch_organizer, fetch_tickets
     from .normalizer import normalize_event, validate_event
-    from .db_upsert import upsert_event
+    from .db_upsert import load_category_map, upsert_event
 
 try:
     from shared import HTTP_TIMEOUT, RateLimited, fetch_text
@@ -334,6 +320,8 @@ def main() -> None:
         if start_str:
             try:
                 start_dt = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
+                if start_dt.tzinfo is None:
+                    start_dt = start_dt.replace(tzinfo=timezone.utc)
 
                 if start_dt > cutoff:
                     logger.info(
@@ -348,9 +336,6 @@ def main() -> None:
         to_process.append(event)
 
     # ── Dados complementares, varios eventos ao mesmo tempo ───────────────────
-    #
-    # Cada evento faz 2 chamadas a Sympla; em fila, uma coleta grande levava
-    # minutos. Poucas threads em paralelo, para nao sobrecarregar a Sympla.
 
     with ThreadPoolExecutor(max_workers=BFF_WORKERS) as pool:
         extras = list(pool.map(_fetch_extras, to_process))
@@ -391,6 +376,8 @@ def main() -> None:
     conn = psycopg2.connect(db_url)
 
     try:
+        category_map = load_category_map(conn)
+
         for normalized in valid_events:
 
             normalized["cityId"] = city_id
@@ -411,7 +398,7 @@ def main() -> None:
                 normalized["title"]
             )
 
-            if upsert_event(conn, normalized):
+            if upsert_event(conn, normalized, category_map=category_map):
                 inserted += 1
                 logger.info("OK: %s", normalized["title"])
             else:
@@ -431,12 +418,12 @@ def main() -> None:
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 def run_forever(interval_hours: float) -> None:
-    """Coleta de tempos em tempos; uma falha nao derruba o agendamento."""
+    """Coleta de tempos em tempos; erro transiente não derruba o agendamento."""
 
     while True:
         try:
             main()
-        except (Exception, SystemExit) as error:
+        except Exception as error:
             logger.exception("coleta falhou: %s", error)
 
         logger.info("proxima coleta em %.1f h", interval_hours)

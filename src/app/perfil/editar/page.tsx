@@ -1,10 +1,21 @@
 import { updateProfileAction } from "@/app/actions";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 
-export default async function EditProfile() {
-  const session = await auth();
+const PROFILE_ERRORS: Record<string, string> = {
+  dados:
+    "Confira os dados: nome com 2 a 80 caracteres e URL iniciando com https:// ou /uploads/.",
+  imagem: "Imagem inválida. Envie JPG, PNG ou WebP de até 5 MB.",
+  limite: "Muitas alterações seguidas. Aguarde alguns minutos.",
+};
+
+export default async function EditProfile({
+  searchParams,
+}: {
+  searchParams: Promise<{ erro?: string }>;
+}) {
+  const [session, { erro }] = await Promise.all([getSession(), searchParams]);
   if (!session?.user?.id) redirect("/login?callbackUrl=/perfil/editar");
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: session.user.id },
@@ -16,6 +27,11 @@ export default async function EditProfile() {
         <h1>Editar perfil</h1>
         <span>Atualize como seu nome e sua foto aparecem na plataforma.</span>
       </div>
+      {erro && PROFILE_ERRORS[erro] && (
+        <p className="auth-error" role="alert">
+          {PROFILE_ERRORS[erro]}
+        </p>
+      )}
       <form
         className="event-form profile-edit-form"
         action={updateProfileAction}
@@ -45,10 +61,10 @@ export default async function EditProfile() {
           <label>
             URL da foto
             <input
-              type="url"
+              type="text"
               name="avatarUrl"
               defaultValue={user.avatarUrl ?? ""}
-              placeholder="https://exemplo.com/minha-foto.jpg"
+              placeholder="https://exemplo.com/minha-foto.jpg ou /uploads/..."
             />
           </label>
           <small>

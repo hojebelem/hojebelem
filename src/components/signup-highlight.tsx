@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, CalendarHeart, Sparkles } from "lucide-react";
-import { auth } from "@/auth";
+import { getSession } from "@/lib/session";
 
 export async function SignupHighlight() {
-  const session = await auth();
+  const session = await getSession();
   const cta = session
     ? { href: "/eventos", label: "Explorar rolês" }
     : { href: "/cadastro", label: "Criar minha conta" };

@@ -21,7 +21,17 @@ BFF_BASE = os.environ.get(
 )
 
 
-def _fetch_bff(event_id: int, path: str) -> dict:
+def _validate_event_id(event_id) -> int:
+    """Garante que o ID do evento é um inteiro positivo antes de montar a URL."""
+    if isinstance(event_id, bool):
+        raise ValueError(f"event_id invalido: {event_id!r}")
+    text = str(event_id).strip()
+    if not text.isdigit():
+        raise ValueError(f"event_id invalido: {event_id!r}")
+    return int(text)
+
+
+def _fetch_bff(event_id: int | str, path: str) -> dict:
     """Busca um endpoint BFF generico para um evento.
 
     Args:
@@ -32,13 +42,15 @@ def _fetch_bff(event_id: int, path: str) -> dict:
         dict com o JSON retornado pela API
 
     Raises:
+        ValueError: se event_id nao for numerico
         requests.RequestException: se a API falhar
     """
-    url = f"{BFF_BASE}/{event_id}/{path}"
+    numeric_id = _validate_event_id(event_id)
+    url = f"{BFF_BASE.rstrip('/')}/{numeric_id}/{path}"
     return fetch_json(url, BFF_TIMEOUT)
 
 
-def fetch_organizer(event_id: int) -> dict:
+def fetch_organizer(event_id: int | str) -> dict:
     """Busca dados do organizador de um evento.
 
     Returns:
@@ -47,7 +59,7 @@ def fetch_organizer(event_id: int) -> dict:
     return _fetch_bff(event_id, "organizer")
 
 
-def fetch_tickets(event_id: int) -> dict:
+def fetch_tickets(event_id: int | str) -> dict:
     """Busca tipos de ingresso e precos de um evento.
 
     Returns:

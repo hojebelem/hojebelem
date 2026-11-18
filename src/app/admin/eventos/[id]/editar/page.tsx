@@ -6,6 +6,7 @@ import {
 import { AdminConfirmButton } from "@/components/admin-confirm-button";
 import { AdminEventForm } from "@/components/admin-event-form";
 import { prisma } from "@/lib/prisma";
+import { requireAdminPage } from "@/lib/session";
 import { formatInTimeZone } from "date-fns-tz";
 import { notFound } from "next/navigation";
 
@@ -17,6 +18,7 @@ export default async function EditEvent({
   searchParams: Promise<{ erro?: string }>;
 }) {
   const { id } = await params;
+  await requireAdminPage(`/admin/eventos/${id}/editar`);
   const { erro } = await searchParams;
   const [event, categories] = await Promise.all([
     prisma.event.findUnique({ where: { id }, include: { categories: true } }),

@@ -18,6 +18,7 @@ const slides = [
 export function HeroSlideshow() {
   const [active, setActive] = useState(0);
   useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = window.setInterval(
       () => setActive((current) => (current + 1) % slides.length),
       5500,

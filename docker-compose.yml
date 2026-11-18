@@ -4,8 +4,8 @@ services:
     environment:
       POSTGRES_DB: hojebelem
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports: ["5432:5432"]
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports: ["127.0.0.1:5432:5432"]
     volumes: [postgres_data:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d hojebelem"]
@@ -17,9 +17,9 @@ services:
     build: .
     ports: ["3000:3000"]
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/hojebelem?schema=public
-      AUTH_SECRET: local-development-secret-change-me
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/hojebelem?schema=public}
+      AUTH_SECRET: ${AUTH_SECRET:-local-development-secret-change-me}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -30,7 +30,7 @@ services:
       dockerfile: collector/Dockerfile.collector
     environment:
       # usuário restrito do coletor (crie com collector/db-role.sql)
-      DATABASE_URL: postgresql://hojebelem_collector:collector_local@postgres:5432/hojebelem
+      DATABASE_URL: ${COLLECTOR_DATABASE_URL:-postgresql://hojebelem_collector:collector_local@postgres:5432/hojebelem}
       SYMPLA_BASE_URL: https://www.sympla.com.br/eventos/belem-pa
       COLLECTOR_MAX_PAGES: 5
       COLLECTOR_MAX_DAYS_AHEAD: 120

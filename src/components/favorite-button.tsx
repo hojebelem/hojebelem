@@ -1,12 +1,12 @@
 import { toggleWishlistAction } from "@/app/actions";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 import { Heart } from "lucide-react";
 import { cache } from "react";
 
 // uma consulta por página (cache() vale durante a requisição), não uma por card
 const getSavedEventIds = cache(async () => {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) return new Set<string>();
   const rows = await prisma.wishlist.findMany({
     where: { userId: session.user.id },

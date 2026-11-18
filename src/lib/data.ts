@@ -11,32 +11,53 @@ import { eventDateRange, startOfTodayInBelem } from "./events";
 export const EVENTS_TAG = "events";
 export const CATEGORIES_TAG = "categories";
 
+export const EVENTS_PAGE_SIZE = 24;
+const MAX_SEARCH_LENGTH = 100;
+
+type EventDateFields = {
+  startAt: Date;
+  endAt: Date | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+  reviewedAt?: Date | null;
+  rejectedAt?: Date | null;
+};
+
 // o cache guarda JSON: datas voltam como texto e precisam virar Date de novo
-function reviveDates<
-  T extends {
-    startAt: Date;
-    endAt: Date | null;
-    createdAt: Date;
-    updatedAt: Date;
-    reviewedAt: Date | null;
-    rejectedAt: Date | null;
-  },
->(e: T): T {
-  const date = (d: Date | null) => (d == null ? null : new Date(d));
+function reviveDates<T extends EventDateFields>(e: T): T {
+  const date = (d: Date | null | undefined) => (d == null ? null : new Date(d));
   return {
     ...e,
     startAt: new Date(e.startAt),
     endAt: date(e.endAt),
-    createdAt: new Date(e.createdAt),
-    updatedAt: new Date(e.updatedAt),
-    reviewedAt: date(e.reviewedAt),
-    rejectedAt: date(e.rejectedAt),
+    ...(e.createdAt !== undefined ? { createdAt: new Date(e.createdAt) } : {}),
+    ...(e.updatedAt !== undefined ? { updatedAt: new Date(e.updatedAt) } : {}),
+    ...(e.reviewedAt !== undefined
+      ? { reviewedAt: date(e.reviewedAt) }
+      : {}),
+    ...(e.rejectedAt !== undefined
+      ? { rejectedAt: date(e.rejectedAt) }
+      : {}),
   };
 }
 
 const eventInclude = { categories: { include: { category: true } } } as const;
 
-function toEvent<
+export const eventCardSelect = {
+  id: true,
+  slug: true,
+  title: true,
+  coverImageUrl: true,
+  startAt: true,
+  endAt: true,
+  venueName: true,
+  price: true,
+  statusOverride: true,
+  isFeatured: true,
+  categories: { include: { category: true } },
+} satisfies Prisma.EventSelect;
+
+export function toEvent<
   T extends {
     price: { toString(): string } | null;
     categories: { category: { name: string; slug: string; icon: string } }[];
@@ -53,8 +74,6 @@ function toEvent<
   };
 }
 
-const EVENTS_PAGE_SIZE = 24;
-
 export type EventsQuery = {
   search?: string;
   category?: string;
@@ -66,8 +85,10 @@ export type EventsQuery = {
 // filtros compartilhados por listagem e contagem
 function eventsWhere(query: EventsQuery): Prisma.EventWhereInput {
   const range = eventDateRange(query.date);
+  const search = query.search?.trim().slice(0, MAX_SEARCH_LENGTH);
   return {
     isPublished: true,
+    rejectedAt: null,
     city: { slug: "belem" },
     // só eventos que ainda não acabaram, senão os antigos ocupam as vagas
     AND: [
@@ -91,21 +112,21 @@ function eventsWhere(query: EventsQuery): Prisma.EventWhereInput {
         : []),
     ],
     ...(query.featured ? { isFeatured: true } : {}),
-    ...(query.search
+    ...(search
       ? {
           OR: [
-            { title: { contains: query.search, mode: "insensitive" } },
-            { venueName: { contains: query.search, mode: "insensitive" } },
+            { title: { contains: search, mode: "insensitive" } },
+            { venueName: { contains: search, mode: "insensitive" } },
             {
               createdBy: {
-                name: { contains: query.search, mode: "insensitive" },
+                name: { contains: search, mode: "insensitive" },
               },
             },
             {
               categories: {
                 some: {
                   category: {
-                    name: { contains: query.search, mode: "insensitive" },
+                    name: { contains: search, mode: "insensitive" },
                   },
                 },
               },
@@ -124,42 +145,41 @@ function eventsWhere(query: EventsQuery): Prisma.EventWhereInput {
   };
 }
 
-const queryEvents = unstable_cache(
+async function fetchEventsFromDb(
+  query: EventsQuery,
+  sort: string | undefined,
+  take: number,
+) {
+  const rows = await prisma.event.findMany({
+    where: eventsWhere(query),
+    select: eventCardSelect,
+    // preço: gratuitos (null) primeiro, depois do mais barato ao mais caro
+    orderBy:
+      sort === "preco"
+        ? [{ price: { sort: "asc", nulls: "first" } }, { startAt: "asc" }]
+        : { startAt: "asc" },
+    take,
+  });
+  return rows.map(toEvent);
+}
+
+const queryCachedEvents = unstable_cache(
   async (
-    search?: string,
     category?: string,
     price?: string,
     date?: string,
     featured?: boolean,
     sort?: string,
-    page?: number,
-  ) => {
-    const rows = await prisma.event.findMany({
-      where: eventsWhere({ search, category, price, date, featured }),
-      include: eventInclude,
-      // preço: gratuitos (null) primeiro, depois do mais barato ao mais caro
-      orderBy:
-        sort === "preco"
-          ? [{ price: { sort: "asc", nulls: "first" } }, { startAt: "asc" }]
-          : { startAt: "asc" },
-      take: EVENTS_PAGE_SIZE * (page ?? 1),
-    });
-    return rows.map(toEvent);
-  },
+    take = EVENTS_PAGE_SIZE,
+  ) => fetchEventsFromDb({ category, price, date, featured }, sort, take),
   ["events-list"],
   { tags: [EVENTS_TAG], revalidate: 300 },
 );
 
-const queryEventsCount = unstable_cache(
-  (
-    search?: string,
-    category?: string,
-    price?: string,
-    date?: string,
-    featured?: boolean,
-  ) =>
+const queryCachedEventsCount = unstable_cache(
+  (category?: string, price?: string, date?: string, featured?: boolean) =>
     prisma.event.count({
-      where: eventsWhere({ search, category, price, date, featured }),
+      where: eventsWhere({ category, price, date, featured }),
     }),
   ["events-count"],
   { tags: [EVENTS_TAG], revalidate: 300 },
@@ -181,35 +201,41 @@ function demoMatches(query?: EventsQuery) {
 }
 
 export async function getEvents(
-  query?: EventsQuery & { sort?: "data" | "preco"; page?: number },
+  query?: EventsQuery & { sort?: "data" | "preco"; page?: number; limit?: number },
 ) {
+  const take = query?.limit ?? EVENTS_PAGE_SIZE * (query?.page ?? 1);
+  const search = query?.search?.trim().slice(0, MAX_SEARCH_LENGTH);
   try {
-    const rows = await queryEvents(
-      query?.search,
-      query?.category,
-      query?.price,
-      query?.date,
-      query?.featured,
-      query?.sort,
-      query?.page,
-    );
+    // buscas livres não vão para unstable_cache para evitar explosão de chaves
+    const rows = search
+      ? await fetchEventsFromDb({ ...query, search }, query?.sort, take)
+      : await queryCachedEvents(
+          query?.category,
+          query?.price,
+          query?.date,
+          query?.featured,
+          query?.sort,
+          take,
+        );
     return rows.map(reviveDates);
   } catch (error) {
     // em produção, banco fora do ar mostra a página de erro, não eventos falsos
     if (process.env.NODE_ENV === "production") throw error;
-    return demoMatches(query);
+    return demoMatches(query).slice(0, take);
   }
 }
 
 export async function countEvents(query?: EventsQuery) {
+  const search = query?.search?.trim().slice(0, MAX_SEARCH_LENGTH);
   try {
-    return await queryEventsCount(
-      query?.search,
-      query?.category,
-      query?.price,
-      query?.date,
-      query?.featured,
-    );
+    return search
+      ? await prisma.event.count({ where: eventsWhere({ ...query, search }) })
+      : await queryCachedEventsCount(
+          query?.category,
+          query?.price,
+          query?.date,
+          query?.featured,
+        );
   } catch (error) {
     // em produção, banco fora do ar mostra a página de erro, não eventos falsos
     if (process.env.NODE_ENV === "production") throw error;
@@ -220,7 +246,12 @@ export async function countEvents(query?: EventsQuery) {
 const queryEvent = unstable_cache(
   async (slug: string) => {
     const row = await prisma.event.findFirst({
-      where: { slug, isPublished: true, city: { slug: "belem" } },
+      where: {
+        slug,
+        isPublished: true,
+        rejectedAt: null,
+        city: { slug: "belem" },
+      },
       include: eventInclude,
     });
     return row ? toEvent(row) : null;

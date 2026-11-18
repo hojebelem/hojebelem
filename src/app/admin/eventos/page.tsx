@@ -7,6 +7,7 @@ import {
 } from "@/app/actions";
 import { AdminConfirmButton } from "@/components/admin-confirm-button";
 import { prisma } from "@/lib/prisma";
+import { requireAdminPage } from "@/lib/session";
 import type { Prisma } from "@prisma/client";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -139,6 +140,7 @@ export default async function AdminEvents({
 }: {
   searchParams: Promise<{ q?: string; status?: string; pagina?: string }>;
 }) {
+  await requireAdminPage("/admin/eventos");
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const status =

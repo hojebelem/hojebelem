@@ -1,5 +1,6 @@
 import { updateUserRoleAction } from "@/app/actions";
 import { prisma } from "@/lib/prisma";
+import { requireAdminPage } from "@/lib/session";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 
@@ -37,6 +38,7 @@ export default async function AdminUsers({
 }: {
   searchParams: Promise<{ q?: string; pagina?: string; erro?: string }>;
 }) {
+  await requireAdminPage("/admin/usuarios");
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const where: Prisma.UserWhereInput = q
@@ -69,8 +71,8 @@ export default async function AdminUsers({
           <p>PESSOAS</p>
           <h1>Usuários</h1>
           <span>
-            {total} {total === 1 ? "usuário" : "usuários"} • a troca de papel
-            vale no próximo login da pessoa.
+            {total} {total === 1 ? "usuário" : "usuários"} • alterações de papel
+            de administrador passam a valer imediatamente.
           </span>
         </div>
       </div>

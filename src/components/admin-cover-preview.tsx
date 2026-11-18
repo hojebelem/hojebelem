@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { isSafeUrlOrPath } from "@/lib/validation";
 
 export function AdminCoverPreview({ defaultValue }: { defaultValue: string }) {
   const [url, setUrl] = useState(defaultValue);
   const [failedUrl, setFailedUrl] = useState("");
   const src = url.trim();
+  const safeSrc = src && isSafeUrlOrPath(src) ? src : "";
   return (
     <>
       <label>
@@ -18,17 +20,17 @@ export function AdminCoverPreview({ defaultValue }: { defaultValue: string }) {
           placeholder="https://... ou /images/..."
         />
       </label>
-      {src && failedUrl !== src && (
+      {safeSrc && failedUrl !== safeSrc && (
         // <img> simples: a prévia aceita qualquer domínio, sem passar pelo otimizador
         // eslint-disable-next-line @next/next/no-img-element
         <img
           className="admin-cover-preview"
-          src={src}
+          src={safeSrc}
           alt="Prévia da capa"
-          onError={() => setFailedUrl(src)}
+          onError={() => setFailedUrl(safeSrc)}
         />
       )}
-      {src && failedUrl === src && (
+      {((src && !safeSrc) || (safeSrc && failedUrl === safeSrc)) && (
         <p className="admin-cover-error">Não foi possível carregar a imagem.</p>
       )}
     </>

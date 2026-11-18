@@ -92,6 +92,9 @@ model Event {
   @@index([startAt])
   @@index([cityId, isPublished, startAt])
   @@index([isPublished, isFeatured])
+  @@index([isPublished, rejectedAt, startAt])
+  @@index([source, reviewedAt, rejectedAt])
+  @@index([updatedAt])
 }
 
 model EventCategory {

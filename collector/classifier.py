@@ -1,55 +1,74 @@
 """
 Classificador de eventos por palavras-chave.
 
-Classifica cada evento em uma categoria e (opcionalmente) subcategoria
-baseado no nome do evento e organizador. Adaptado do repo de referencia
-ezequielfb/Web-Scraper-Eventos (simplificado para as categorias do site).
+Classifica cada evento em uma categoria correspondente às categorias cadastradas
+no banco do hojebelem (`src/lib/catalog.ts`), baseado no nome do evento e organizador.
 """
 import re
 
 
-# Categorias: nome -> lista de palavras-chave
+# Categorias: nome exato do banco -> lista de palavras-chave
 CATEGORIES = {
-    "Musica": ["show", "festival", "banda", "cantor", "tributo", "turnê",
-               "rock", "sertanejo", "samba", "pagode", "eletrônica", "dj",
-               "mpb", "funk", "gospel", "reggae", "forró", "jazz", "blues",
-               "concerto", "orquestra", "micareta", "carnaval", "balada"],
-    "Teatro": ["teatro", "peça", "stand-up", "comédia", "drama",
-               "monólogo", "musical", "palco", "humor", "performance"],
-    "Esporte": ["esporte", "corrida", "maratona", "futebol", "campeonato",
-                "crossfit", "jiu-jitsu", "luta", "mma"],
-    "Gastronomia": ["gastronomia", "comida", "chef", "degustação",
-                    "restaurante", "vinho", "cerveja", "churrasco", "bar",
-                    "food", "barbecue", "bbq"],
-    "Feira": ["feira", "exposição", "expo", "mostra", "artesanato",
-              "negócios", "mercado", "design", "arte", "fotografia",
-              "quadrinhos", "games", "geek", "livros", "automóveis"],
-    "Infantil": ["infantil", "criança", "kids", "infância", "família",
-                 "bonecos", "mágica"],
-    "Palestra": ["palestra", "curso", "workshop", "webinar", "conferência",
-                 "treinamento", "seminário", "aulão", "congresso",
-                 "encontro", "imersão", "mentoria"],
-    "Festa": ["festa", "balada", "noite", "reveillon", "open bar",
-              "open bar", "after", "pool party", "sunset"],
+    "Música ao vivo": [
+        "show", "festival", "banda", "cantor", "tributo", "turnê",
+        "rock", "sertanejo", "samba", "pagode", "eletrônica", "dj",
+        "mpb", "funk", "gospel", "reggae", "forró", "jazz", "blues",
+        "concerto", "orquestra", "micareta", "carnaval",
+    ],
+    "Stand-up/Comédia": ["stand-up", "standup", "comédia", "humor"],
+    "Teatro": [
+        "teatro", "peça", "drama", "monólogo", "musical", "palco", "performance",
+    ],
+    "Esportes": [
+        "esporte", "esportes", "corrida", "maratona", "futebol", "campeonato",
+        "crossfit", "jiu-jitsu", "luta", "mma",
+    ],
+    "Gastronomia": [
+        "gastronomia", "comida", "chef", "degustação", "restaurante",
+        "vinho", "cerveja", "churrasco", "bar", "food", "barbecue", "bbq",
+    ],
+    "Feiras e bazares": [
+        "feira", "bazar", "exposição", "expo", "mostra", "artesanato",
+        "negócios", "mercado", "design", "arte", "fotografia",
+        "quadrinhos", "games", "geek", "livros", "automóveis",
+    ],
+    "Infantil": [
+        "infantil", "criança", "crianças", "kids", "infância", "família",
+        "bonecos", "mágica",
+    ],
+    "Palestras": [
+        "palestra", "curso", "workshop", "webinar", "conferência",
+        "treinamento", "seminário", "aulão", "congresso",
+        "encontro", "imersão", "mentoria",
+    ],
+    "Festas": [
+        "festa", "balada", "noite", "reveillon", "réveillon", "open bar",
+        "after", "pool party", "sunset",
+    ],
 }
 
+_CATEGORY_PATTERNS = [
+    (
+        category,
+        re.compile(
+            r"\b(?:" + "|".join(re.escape(kw) for kw in keywords) + r")\b",
+            re.IGNORECASE,
+        ),
+    )
+    for category, keywords in CATEGORIES.items()
+]
 
-def classify_event(title: str, organizer_name: str = None) -> str:
-    """Classifica um evento baseado em palavras-chave no titulo.
 
-    Args:
-        title: nome do evento
-        organizer_name: nome do organizador (opcional, melhora acerto)
+def classify_event(title: str, organizer_name: str | None = None) -> str:
+    """Classifica um evento baseado em palavras-chave no título e organizador.
 
     Returns:
-        nome da categoria — ex: "Musica" ou "Outros"
+        nome exato da categoria no banco — ex: "Música ao vivo" ou "Eventos culturais"
     """
-    text = (title + " " + (organizer_name or "")).lower()
-    # remove pontuacao para casamento mais limpo
-    text = re.sub(r"[^\w\s]", " ", text)
+    text = f"{title} {organizer_name or ''}".lower()
+    text = re.sub(r"[^\w\s-]", " ", text)
 
-    for category, keywords in CATEGORIES.items():
-        for kw in keywords:
-            if kw in text:
-                return category
-    return "Outros"
+    for category, pattern in _CATEGORY_PATTERNS:
+        if pattern.search(text):
+            return category
+    return "Eventos culturais"

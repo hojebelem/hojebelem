@@ -12,7 +12,17 @@ from psycopg2 import sql
 logger = logging.getLogger("collector")
 
 
-def upsert_event(db, event: dict) -> bool:
+def load_category_map(conn) -> dict[str, str]:
+    """Carrega mapa {nome_lowercase: id} de categorias do banco."""
+    cur = conn.cursor()
+    try:
+        cur.execute('SELECT id, LOWER(name) FROM "Category"')
+        return {name_lower: cat_id for cat_id, name_lower in cur.fetchall()}
+    finally:
+        cur.close()
+
+
+def upsert_event(db, event: dict, category_map: dict[str, str] | None = None) -> bool:
     """Insere/atualiza um evento e relaciona sua categoria.
 
     `db` pode ser a URL do banco (abre e fecha uma conexao) ou uma conexao
@@ -22,6 +32,7 @@ def upsert_event(db, event: dict) -> bool:
     if not event.get("externalId"):
         return False
 
+    payload = {"latitude": None, "longitude": None, **event}
     own_conn = isinstance(db, str)
     conn = None
     cur = None
@@ -36,6 +47,7 @@ def upsert_event(db, event: dict) -> bool:
                 INSERT INTO "Event" (
                     id, title, slug, "externalId", source,
                     "startAt", "endAt", "venueName", address,
+                    latitude, longitude,
                     "externalPurchaseLink", "coverImageUrl", price,
                     description, "isPublished", "cityId", "createdById",
                     "createdAt", "updatedAt"
@@ -44,6 +56,7 @@ def upsert_event(db, event: dict) -> bool:
                     gen_random_uuid(), %(title)s, %(slug)s,
                     %(externalId)s, %(source)s,
                     %(startAt)s, %(endAt)s, %(venueName)s, %(address)s,
+                    %(latitude)s, %(longitude)s,
                     %(externalPurchaseLink)s, %(coverImageUrl)s,
                     %(price)s, %(description)s, %(isPublished)s,
                     %(cityId)s, %(createdById)s, NOW(), NOW()
@@ -54,13 +67,17 @@ def upsert_event(db, event: dict) -> bool:
                     "endAt" = EXCLUDED."endAt",
                     "externalPurchaseLink" = EXCLUDED."externalPurchaseLink",
                     price = EXCLUDED.price,
-                    -- textos e capa: depois que o admin revisou, ficam como ele deixou
+                    -- textos, localizacao e capa: depois que o admin revisou, ficam como ele deixou
                     title = CASE WHEN "Event"."reviewedAt" IS NULL
                         THEN EXCLUDED.title ELSE "Event".title END,
                     "venueName" = CASE WHEN "Event"."reviewedAt" IS NULL
                         THEN EXCLUDED."venueName" ELSE "Event"."venueName" END,
                     address = CASE WHEN "Event"."reviewedAt" IS NULL
                         THEN EXCLUDED.address ELSE "Event".address END,
+                    latitude = CASE WHEN "Event"."reviewedAt" IS NULL
+                        THEN EXCLUDED.latitude ELSE "Event".latitude END,
+                    longitude = CASE WHEN "Event"."reviewedAt" IS NULL
+                        THEN EXCLUDED.longitude ELSE "Event".longitude END,
                     "coverImageUrl" = CASE WHEN "Event"."reviewedAt" IS NULL
                         THEN EXCLUDED."coverImageUrl" ELSE "Event"."coverImageUrl" END,
                     description = CASE WHEN "Event"."reviewedAt" IS NULL
@@ -68,7 +85,7 @@ def upsert_event(db, event: dict) -> bool:
                     "updatedAt" = NOW()
                 RETURNING id, "reviewedAt"
             """),
-            event,
+            payload,
         )
 
         event_id, reviewed_at = cur.fetchone()
@@ -77,21 +94,23 @@ def upsert_event(db, event: dict) -> bool:
         category_name = event.get("categoryName")
 
         if category_name and reviewed_at is None:
-            cur.execute(
-                """
-                SELECT id
-                FROM "Category"
-                WHERE LOWER(name) = LOWER(%s)
-                LIMIT 1
-                """,
-                (category_name,),
-            )
+            category_id = None
+            if category_map is not None:
+                category_id = category_map.get(category_name.lower())
+            else:
+                cur.execute(
+                    """
+                    SELECT id
+                    FROM "Category"
+                    WHERE LOWER(name) = LOWER(%s)
+                    LIMIT 1
+                    """,
+                    (category_name,),
+                )
+                category_row = cur.fetchone()
+                category_id = category_row[0] if category_row else None
 
-            category_row = cur.fetchone()
-
-            if category_row:
-                category_id = category_row[0]
-
+            if category_id:
                 # 3. Remove categorias anteriores deste evento.
                 cur.execute(
                     """

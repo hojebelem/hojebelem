@@ -1,6 +1,7 @@
 """Constantes e helpers HTTP compartilhados pelo coletor Sympla."""
 import json
 import os
+import threading
 
 import requests
 
@@ -24,6 +25,18 @@ CHUNK_BYTES = 64 * 1024
 
 HTTP_TOO_MANY_REQUESTS = 429
 
+_thread_local = threading.local()
+
+
+def _get_session() -> requests.Session:
+    """Retorna uma Session HTTP por thread para reaproveitar conexões TCP/TLS."""
+    session = getattr(_thread_local, "session", None)
+    if session is None:
+        session = requests.Session()
+        session.headers.update(HEADERS)
+        _thread_local.session = session
+    return session
+
 
 class ResponseTooLarge(requests.RequestException):
     """A resposta passou de MAX_RESPONSE_BYTES."""
@@ -35,7 +48,7 @@ class RateLimited(requests.RequestException):
 
 def fetch_text(url: str, timeout: int) -> str:
     """GET com limite de tamanho. Levanta RequestException em qualquer falha."""
-    with requests.get(url, headers=HEADERS, timeout=timeout, stream=True) as resp:
+    with _get_session().get(url, timeout=timeout, stream=True) as resp:
         if resp.status_code == HTTP_TOO_MANY_REQUESTS:
             raise RateLimited(f"429 em {url}")
         resp.raise_for_status()

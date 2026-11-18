@@ -10,15 +10,20 @@ import { HeroCarousel } from "@/components/hero-carousel";
 import { InstagramHighlight } from "@/components/instagram-highlight";
 import { SignupHighlight } from "@/components/signup-highlight";
 import { GoogleAdSlot } from "@/components/google-ads";
+
 export default async function Home() {
-  const [events, categories] = await Promise.all([
-    getEvents(),
+  const [events, featured, categories] = await Promise.all([
+    getEvents({ limit: 80 }),
+    getEvents({ featured: true, limit: 24 }),
     getCategories(),
   ]);
-  const today = events.filter((e) => getEventStatus(e) === "É Hoje"),
-    tomorrow = events.filter((e) => getEventStatus(e) === "É amanhã"),
-    later = events.filter((e) => !today.includes(e) && !tomorrow.includes(e)),
-    featured = events.filter((e) => e.isFeatured);
+  const today = events.filter((e) => getEventStatus(e) === "É Hoje");
+  const tomorrow = events.filter((e) => getEventStatus(e) === "É amanhã");
+  const seenIds = new Set([
+    ...today.map((e) => e.id),
+    ...tomorrow.map((e) => e.id),
+  ]);
+  const later = events.filter((e) => !seenIds.has(e.id));
   // destaques no banner; sem destaque, os próximos eventos
   const heroEvents = (featured.length ? featured : events)
     .slice(0, 5)

@@ -5,6 +5,7 @@ import {
 } from "@/app/actions";
 import { AdminConfirmButton } from "@/components/admin-confirm-button";
 import { prisma } from "@/lib/prisma";
+import { requireAdminPage } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function AdminCategories({
 }: {
   searchParams: Promise<{ erro?: string }>;
 }) {
+  await requireAdminPage("/admin/categorias");
   const { erro } = await searchParams;
   const categories = await prisma.category.findMany({
     orderBy: { name: "asc" },

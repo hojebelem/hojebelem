@@ -1,6 +1,8 @@
 # Coletor de eventos Sympla — container Python standalone
 FROM python:3.11-slim
 WORKDIR /app
-RUN pip install requests==2.32.3 psycopg2-binary==2.9.10
+RUN pip install --no-cache-dir requests==2.32.3 psycopg2-binary==2.9.10 \
+  && useradd -r -s /bin/false collector
 COPY collector/ /app/collector/
+USER collector
 CMD ["python3", "-m", "collector.collector"]

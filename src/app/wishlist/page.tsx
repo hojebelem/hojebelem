@@ -1,27 +1,26 @@
 import { EventSection } from "@/components/section";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
-import { Heart } from "lucide-react";
+import { eventCardSelect, toEvent } from "@/lib/data";
 import { startOfTodayInBelem } from "@/lib/events";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
+import { Heart } from "lucide-react";
+import { redirect } from "next/navigation";
 
 export default async function Wishlist() {
-  const session = await auth();
+  const session = await getSession();
+  if (!session?.user?.id) redirect("/login?callbackUrl=/wishlist");
+
   const saved = await prisma.wishlist.findMany({
-    where: { userId: session!.user.id },
-    include: {
-      event: { include: { categories: { include: { category: true } } } },
+    where: {
+      userId: session.user.id,
+      event: { isPublished: true, rejectedAt: null },
+    },
+    select: {
+      event: { select: eventCardSelect },
     },
     orderBy: { createdAt: "desc" },
   });
-  const events = saved.map(({ event }) => ({
-    ...event,
-    price: event.price ? Number(event.price) : null,
-    category: event.categories[0]?.category ?? {
-      name: "Evento",
-      slug: "eventos",
-      icon: "✦",
-    },
-  }));
+  const events = saved.map(({ event }) => toEvent(event));
   const categoryIds = [
     ...new Set(
       saved.flatMap(({ event }) =>
@@ -32,6 +31,8 @@ export default async function Wishlist() {
   const recommendationsRaw = await prisma.event.findMany({
     where: {
       isPublished: true,
+      rejectedAt: null,
+      city: { slug: "belem" },
       // só eventos que ainda não acabaram
       OR: [
         { endAt: { gte: new Date() } },
@@ -42,19 +43,11 @@ export default async function Wishlist() {
         ? { categories: { some: { categoryId: { in: categoryIds } } } }
         : {}),
     },
-    include: { categories: { include: { category: true } } },
+    select: eventCardSelect,
     orderBy: { startAt: "asc" },
     take: 4,
   });
-  const recommendations = recommendationsRaw.map((event) => ({
-    ...event,
-    price: event.price ? Number(event.price) : null,
-    category: event.categories[0]?.category ?? {
-      name: "Evento",
-      slug: "eventos",
-      icon: "✦",
-    },
-  }));
+  const recommendations = recommendationsRaw.map(toEvent);
   return (
     <div className="shell page-space">
       <div className="page-intro">

@@ -1,4 +1,3 @@
-import { auth } from "@/auth";
 import {
   ChevronRight,
   CircleHelp,
@@ -11,14 +10,20 @@ import {
 import Link from "next/link";
 import { logoutAction } from "@/app/actions";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
+import { isSafeUrlOrPath } from "@/lib/validation";
 
 export default async function Profile() {
-  const session = await auth();
+  const session = await getSession();
   const user = session?.user?.id
     ? await prisma.user.findUnique({ where: { id: session.user.id } })
     : null;
   const name = user?.name ?? session?.user?.name ?? "Visitante";
-  const avatarUrl = user?.avatarUrl ?? session?.user?.image;
+  const rawAvatar = user?.avatarUrl ?? session?.user?.image;
+  const avatarUrl =
+    rawAvatar && isSafeUrlOrPath(rawAvatar)
+      ? rawAvatar.replace(/["\\\n\r]/g, "")
+      : null;
   const initial = name.slice(0, 2).toUpperCase();
   const items = [
     { href: "/perfil/editar", label: "Editar perfil", icon: UserRound },
@@ -29,7 +34,7 @@ export default async function Profile() {
     },
     { href: "/divulgar", label: "Divulgue seu evento", icon: Megaphone },
     { href: "/sobre", label: "Sobre a plataforma", icon: Info },
-    ...(session?.user?.role === "ADMIN"
+    ...(user?.role === "ADMIN"
       ? [{ href: "/admin", label: "Painel admin", icon: ShieldCheck }]
       : []),
   ];
@@ -39,7 +44,7 @@ export default async function Profile() {
         <div
           className="avatar"
           style={
-            avatarUrl ? { backgroundImage: `url(${avatarUrl})` } : undefined
+            avatarUrl ? { backgroundImage: `url("${avatarUrl}")` } : undefined
           }
         >
           {avatarUrl ? null : initial}

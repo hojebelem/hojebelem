@@ -1,12 +1,14 @@
 import { createEventAction } from "@/app/actions";
 import { AdminEventForm } from "@/components/admin-event-form";
 import { getCategories } from "@/lib/data";
+import { requireAdminPage } from "@/lib/session";
 
 export default async function NewEvent({
   searchParams,
 }: {
   searchParams: Promise<{ erro?: string }>;
 }) {
+  await requireAdminPage("/admin/eventos/novo");
   const { erro } = await searchParams;
   const categories = await getCategories();
   return (

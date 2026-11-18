@@ -50,6 +50,7 @@ function googleCalendarUrl(e: {
 import { FavoriteButton } from "@/components/favorite-button";
 import { GoogleAdSlot } from "@/components/google-ads";
 import { isOptimizableImage } from "@/lib/images";
+import { isHttpUrl, isSafeUrlOrPath } from "@/lib/validation";
 
 export async function generateMetadata({
   params,
@@ -78,6 +79,14 @@ export default async function EventDetail({
   const e = await getEvent((await params).slug);
   if (!e) notFound();
   const ended = isEventEnded(e);
+  const coverImageUrl = isSafeUrlOrPath(e.coverImageUrl)
+    ? e.coverImageUrl
+    : "/images/hero-belem.webp";
+  const purchaseHref = isHttpUrl(e.externalPurchaseLink)
+    ? e.externalPurchaseLink
+    : null;
+  const socialHref =
+    e.socialLink && isHttpUrl(e.socialLink) ? e.socialLink : null;
   // dados estruturados: o Google mostra o evento com data e local na busca
   const jsonLd = {
     "@context": "https://schema.org",
@@ -117,8 +126,8 @@ export default async function EventDetail({
       />
       <div className="detail-cover">
         <Image
-          src={e.coverImageUrl}
-          unoptimized={!isOptimizableImage(e.coverImageUrl)}
+          src={coverImageUrl}
+          unoptimized={!isOptimizableImage(coverImageUrl)}
           alt={`Capa de ${e.title}`}
           fill
           preload
@@ -213,20 +222,20 @@ export default async function EventDetail({
             <button className="ended-booking-button" type="button" disabled>
               Evento encerrado
             </button>
-          ) : (
+          ) : purchaseHref ? (
             <a
               className="gradient-button"
-              href={e.externalPurchaseLink}
+              href={purchaseHref}
               target="_blank"
               rel="noopener noreferrer"
             >
               Reservar agora <ExternalLink />
             </a>
-          )}
-          {!ended && e.socialLink && (
+          ) : null}
+          {!ended && socialHref && (
             <a
               className="secondary-button"
-              href={e.socialLink}
+              href={socialHref}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -268,15 +277,15 @@ export default async function EventDetail({
           <button type="button" disabled>
             Evento encerrado
           </button>
-        ) : (
+        ) : purchaseHref ? (
           <a
-            href={e.externalPurchaseLink}
+            href={purchaseHref}
             target="_blank"
             rel="noopener noreferrer"
           >
             Reservar agora
           </a>
-        )}
+        ) : null}
       </div>
     </div>
   );

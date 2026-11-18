@@ -1,9 +1,16 @@
-import { auth } from "@/auth";
 import { SubmitEventForm } from "@/components/submit-event-form";
 import { getCategories } from "@/lib/data";
+import { getSession } from "@/lib/session";
 import Link from "next/link";
 
 export const metadata = { title: "Divulgue seu evento" };
+
+const FORM_ERRORS: Record<string, string> = {
+  dados:
+    "Confira os dados: descrição com 20+ caracteres, links completos (https://) e data válida.",
+  datas: "A hora final precisa ser depois do início.",
+  limite: "Muitos envios seguidos. Aguarde um pouco antes de enviar outro evento.",
+};
 
 export default async function SubmitEvent({
   searchParams,
@@ -11,7 +18,7 @@ export default async function SubmitEvent({
   searchParams: Promise<{ erro?: string; enviado?: string }>;
 }) {
   const [session, { erro, enviado }] = await Promise.all([
-    auth(),
+    getSession(),
     searchParams,
   ]);
   const categories = session?.user?.id ? await getCategories() : [];
@@ -42,10 +49,9 @@ export default async function SubmitEvent({
               equipe.
             </p>
           )}
-          {erro === "dados" && (
+          {erro && FORM_ERRORS[erro] && (
             <p className="auth-error" role="alert">
-              Confira os dados: descrição com 20+ caracteres, links completos
-              (https://) e data válida.
+              {FORM_ERRORS[erro]}
             </p>
           )}
           <SubmitEventForm categories={categories} />

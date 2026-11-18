@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatEventDate, startOfTodayInBelem } from "@/lib/events";
+import { requireAdminPage } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ function formatCollection(date: Date) {
 }
 
 export default async function Admin() {
+  await requireAdminPage("/admin");
   const [
     published,
     upcoming,

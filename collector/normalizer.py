@@ -29,6 +29,15 @@ def _text(value) -> str:
     return str(value or "").strip()
 
 
+def _format_address(loc: dict) -> str:
+    """Monta o endereço sem separadores duplicados quando algum campo falta."""
+    street = ", ".join(
+        part for part in (_text(loc.get("address")), _text(loc.get("address_num"))) if part
+    )
+    neighborhood = _text(loc.get("neighborhood"))
+    return " - ".join(part for part in (street, neighborhood) if part)
+
+
 def _price_of(ticket: dict):
     """Preco (decimal) de um ingresso, ou None se ausente/invalido."""
     price = ticket.get("salePriceWithDiscountMonetary") or ticket.get("salePriceMonetary")
@@ -62,20 +71,7 @@ def _safe_cover(url) -> str:
 
 
 def normalize_event(raw: dict, organizer: dict, tickets: dict | None) -> dict:
-    """Converte dados brutos da Sympla para o schema Event do Prisma.
-
-    Args:
-        raw: dict do parser Flight (campos: id, name, slug, url, start_date,
-             end_date, images, location, etc.)
-        organizer: dict da API BFF /organizer (fantasyName, name, document)
-        tickets: dict da API BFF /tickets, ou None se a busca falhou
-
-    Returns:
-        dict com campos: title, slug, externalId, source, startAt, endAt,
-        venueName, address, latitude, longitude, externalPurchaseLink,
-        coverImageUrl, price, priceUnknown, description, organizerName,
-        isPublished
-    """
+    """Converte dados brutos da Sympla para o schema Event do Prisma."""
     loc = raw.get("location", {}) or {}
     imgs = raw.get("images", {}) or {}
     org_name = _text(organizer.get("fantasyName") or organizer.get("name", ""))
@@ -86,13 +82,12 @@ def normalize_event(raw: dict, organizer: dict, tickets: dict | None) -> dict:
     return {
         "title": _clean_title(_text(raw.get("name", ""))),
         "slug": f"sympla-{raw.get('id', '')}",  # sympla-<id> p/ evitar colisao com slugs do seed
-        "externalId": str(raw.get('id', '')),
+        "externalId": str(raw.get("id", "")),
         "source": "sympla",
         "startAt": raw.get("start_date"),
         "endAt": raw.get("end_date"),
         "venueName": _text(loc.get("name", "")),
-        "address": f"{_text(loc.get('address', ''))}, {_text(loc.get('address_num', ''))}"
-                   f" - {_text(loc.get('neighborhood', ''))}".strip(", -"),
+        "address": _format_address(loc),
         "latitude": loc.get("lat"),
         "longitude": loc.get("lon"),
         "externalPurchaseLink": _text(raw.get("url", "")),
@@ -101,7 +96,7 @@ def normalize_event(raw: dict, organizer: dict, tickets: dict | None) -> dict:
         "priceUnknown": price_unknown,
         "description": f"Organizado por {org_name}".strip(),
         "organizerName": org_name,
-        "isPublished": True,
+        "isPublished": False,
     }
 
 

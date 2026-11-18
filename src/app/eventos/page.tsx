@@ -6,7 +6,12 @@ import { DateFilters } from "@/components/date-filters";
 import { SortSelect } from "@/components/sort-select";
 import { eventsHref } from "@/components/events-href";
 import { GoogleAdSlot } from "@/components/google-ads";
-import { countEvents, getCategories, getEvents } from "@/lib/data";
+import {
+  countEvents,
+  EVENTS_PAGE_SIZE,
+  getCategories,
+  getEvents,
+} from "@/lib/data";
 
 const MAX_PAGES = 20;
 
@@ -25,7 +30,10 @@ export default async function EventsPage({
   }>;
 }) {
   const p = await searchParams;
-  const page = Math.min(Math.max(Number.parseInt(p.pagina ?? "", 10) || 1, 1), MAX_PAGES);
+  const page = Math.min(
+    Math.max(Number.parseInt(p.pagina ?? "", 10) || 1, 1),
+    MAX_PAGES,
+  );
   const filters = {
     search: p.q,
     category: p.categoria,
@@ -33,11 +41,12 @@ export default async function EventsPage({
     date: p.data,
     featured: p.destaque === "1",
   };
-  const [events, total, categories] = await Promise.all([
+  const [events, categories] = await Promise.all([
     getEvents({ ...filters, sort: p.ordem === "preco" ? "preco" : "data", page }),
-    countEvents(filters),
     getCategories(),
   ]);
+  const mayHaveMore = events.length >= EVENTS_PAGE_SIZE * page;
+  const total = mayHaveMore ? await countEvents(filters) : events.length;
   const params = {
     q: p.q,
     categoria: p.categoria,
