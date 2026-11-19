@@ -75,11 +75,14 @@ export async function loginAction(formData: FormData) {
   }
 }
 
-export async function googleAction() {
-  await signIn("google", { redirectTo: "/" });
+export async function googleAction(formData: FormData) {
+  await signIn("google", {
+    redirectTo: safeRedirect(formData.get("callbackUrl")),
+  });
 }
 
 export async function registerAction(formData: FormData) {
+  const to = safeRedirect(formData.get("callbackUrl"));
   const parsed = z
     .object({
       name: z.string().trim().min(2).max(80),
@@ -87,18 +90,26 @@ export async function registerAction(formData: FormData) {
       password: z.string().min(8).max(128),
     })
     .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect("/cadastro?erro=dados");
+  if (!parsed.success)
+    redirect(
+      `/cadastro?erro=dados${to !== "/" ? `&callbackUrl=${encodeURIComponent(to)}` : ""}`,
+    );
 
   const email = normalizeEmail(parsed.data.email);
   const ipKey = await clientIpKey();
   if (!registerEmailLimiter.hit(email) || !registerIpLimiter.hit(ipKey))
-    redirect("/cadastro?erro=tentativas");
+    redirect(
+      `/cadastro?erro=tentativas${to !== "/" ? `&callbackUrl=${encodeURIComponent(to)}` : ""}`,
+    );
 
   const existing = await prisma.user.findFirst({
     where: { email: { equals: email, mode: "insensitive" } },
     select: { id: true },
   });
-  if (existing) redirect("/cadastro?erro=email");
+  if (existing)
+    redirect(
+      `/cadastro?erro=email${to !== "/" ? `&callbackUrl=${encodeURIComponent(to)}` : ""}`,
+    );
 
   await prisma.user.create({
     data: {
@@ -110,7 +121,7 @@ export async function registerAction(formData: FormData) {
   await signIn("credentials", {
     email,
     password: parsed.data.password,
-    redirectTo: "/",
+    redirectTo: to,
   });
 }
 

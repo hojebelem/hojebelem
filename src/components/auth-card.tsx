@@ -9,6 +9,8 @@ const errors: Record<string, string> = {
   email: "Esse e-mail já tem cadastro. Entre ou use outro e-mail.",
   dados: "Confira os dados: nome com 2+ letras e senha com 8+ caracteres.",
   tentativas: "Muitas tentativas. Espere alguns minutos e tente de novo.",
+  oauth:
+    "Não foi possível entrar com o Google. Tente de novo ou use e-mail e senha.",
 };
 
 const notices: Record<string, string> = {
@@ -103,6 +105,9 @@ export function AuthCard({
             <span>ou</span>
           </div>
           <form action={googleAction}>
+            {callbackUrl && (
+              <input type="hidden" name="callbackUrl" value={callbackUrl} />
+            )}
             <button className="google-button" type="submit">
               <b>G</b> Continuar com Google
             </button>
@@ -111,7 +116,9 @@ export function AuthCard({
       )}
       <p className="auth-switch">
         {signup ? "Já tem uma conta? " : "Ainda não tem uma conta? "}
-        <Link href={signup ? "/login" : "/cadastro"}>
+        <Link
+          href={`${signup ? "/login" : "/cadastro"}${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`}
+        >
           {signup ? "Entrar" : "Criar conta"}
         </Link>
       </p>
