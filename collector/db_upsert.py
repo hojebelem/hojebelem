@@ -22,6 +22,55 @@ def load_category_map(conn) -> dict[str, str]:
         cur.close()
 
 
+def record_collector_run(
+    conn,
+    source: str,
+    started_at,
+    status: str,
+    fetched_count: int = 0,
+    upserted_count: int = 0,
+    invalid_count: int = 0,
+    error_message: str | None = None,
+) -> bool:
+    """Registra uma execucao do coletor em CollectorRun (sem derrubar o processo em erro)."""
+    cur = None
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO "CollectorRun" (
+                id, source, "startedAt", "finishedAt", status,
+                "fetchedCount", "upsertedCount", "invalidCount", "errorMessage"
+            )
+            VALUES (
+                gen_random_uuid(), %s, %s, NOW(), %s,
+                %s, %s, %s, %s
+            )
+            """,
+            (
+                source,
+                started_at,
+                status,
+                fetched_count,
+                upserted_count,
+                invalid_count,
+                error_message[:500] if error_message else None,
+            ),
+        )
+        conn.commit()
+        return True
+    except Exception:
+        logger.exception("falha ao gravar CollectorRun para %s", source)
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+    finally:
+        if cur:
+            cur.close()
+
+
 def upsert_event(db, event: dict, category_map: dict[str, str] | None = None) -> bool:
     """Insere/atualiza um evento e relaciona sua categoria.
 

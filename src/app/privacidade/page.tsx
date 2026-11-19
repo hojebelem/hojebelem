@@ -41,8 +41,9 @@ export default function Privacy() {
         </p>
         <h2>Seus direitos</h2>
         <p>
-          Você pode pedir acesso, correção ou exclusão dos seus dados. Nome e
-          foto podem ser alterados em Editar perfil; para os demais pedidos,
+          Você pode pedir acesso, correção ou exclusão dos seus dados. Nome,
+          foto, senha e exclusão da conta podem ser feitos diretamente em{" "}
+          <Link href="/perfil/editar">Editar perfil</Link>; para outros pedidos,
           fale com a gente pela página de <Link href="/contato">contato</Link>.
         </p>
         <h2>Mudanças nesta política</h2>

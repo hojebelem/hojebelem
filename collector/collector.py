@@ -8,6 +8,7 @@ Execucao:
 """
 
 import argparse
+from datetime import datetime, timezone
 import logging
 import os
 import time
@@ -15,7 +16,7 @@ import time
 import psycopg2
 
 from .classifier import classify_event
-from .db_upsert import load_category_map, upsert_event
+from .db_upsert import load_category_map, record_collector_run, upsert_event
 from .sources import SOURCES
 
 MAX_PAGES = int(os.environ.get("COLLECTOR_MAX_PAGES", "5"))
@@ -105,6 +106,7 @@ def main(sources: list[str] | None = None) -> None:
         category_map = load_category_map(conn)
 
         for source_name in enabled:
+            started_at = datetime.now(timezone.utc)
             try:
                 valid_events, invalid_count, total_processed = SOURCES[source_name](
                     MAX_PAGES,
@@ -112,15 +114,29 @@ def main(sources: list[str] | None = None) -> None:
                 )
             except Exception as error:
                 logger.exception("fonte %s falhou: %s", source_name, error)
+                record_collector_run(
+                    conn,
+                    source_name,
+                    started_at,
+                    "ERROR",
+                    error_message=str(error),
+                )
                 continue
 
             if should_abort(total_processed, invalid_count):
-                logger.error(
-                    "[%s] mais de 30%% invalidos (%d de %d): estrutura pode ter mudado. "
-                    "Nada gravado para esta fonte.",
+                msg = (
+                    f"mais de 30% invalidos ({invalid_count} de {total_processed}): "
+                    "estrutura pode ter mudado."
+                )
+                logger.error("[%s] %s Nada gravado para esta fonte.", source_name, msg)
+                record_collector_run(
+                    conn,
                     source_name,
-                    invalid_count,
-                    total_processed,
+                    started_at,
+                    "ABORTED",
+                    fetched_count=total_processed,
+                    invalid_count=invalid_count,
+                    error_message=msg,
                 )
                 continue
 
@@ -139,6 +155,15 @@ def main(sources: list[str] | None = None) -> None:
                 else:
                     logger.warning("FALHA [%s]: %s", source_name, normalized["title"])
 
+            record_collector_run(
+                conn,
+                source_name,
+                started_at,
+                "OK",
+                fetched_count=total_processed,
+                upserted_count=inserted,
+                invalid_count=invalid_count,
+            )
             total_inserted += inserted
             logger.info("=== [%s] finalizada: %d inseridos/atualizados ===", source_name, inserted)
     finally:

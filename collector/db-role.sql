@@ -20,6 +20,7 @@ GRANT USAGE ON SCHEMA public TO hojebelem_collector;
 GRANT SELECT ON "City", "Category" TO hojebelem_collector;
 GRANT SELECT (id, role, "createdAt") ON "User" TO hojebelem_collector;
 
--- escrita: só eventos e o vínculo evento-categoria; sem DELETE em eventos
+-- escrita: só eventos, vínculo evento-categoria e log de execução do coletor; sem DELETE em eventos
 GRANT SELECT, INSERT, UPDATE ON "Event" TO hojebelem_collector;
 GRANT SELECT, INSERT, DELETE ON "EventCategory" TO hojebelem_collector;
+GRANT SELECT, INSERT ON "CollectorRun" TO hojebelem_collector;

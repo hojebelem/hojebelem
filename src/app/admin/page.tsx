@@ -35,6 +35,12 @@ function formatCollection(date: Date) {
   return collectionFormat.format(date).replace(",", " às");
 }
 
+const RUN_STATUS: Record<string, string> = {
+  OK: "Concluída",
+  ABORTED: "Abortada (>30% inválidos)",
+  ERROR: "Falhou",
+};
+
 export default async function Admin() {
   await requireAdminPage("/admin");
   const [
@@ -44,6 +50,7 @@ export default async function Admin() {
     cancelled,
     recent,
     lastCollection,
+    lastRunRecord,
     symplaPending,
   ] = await Promise.all([
     prisma.event.count({ where: { isPublished: true, rejectedAt: null } }),
@@ -69,9 +76,12 @@ export default async function Admin() {
       where: collectorWhere,
       _max: { updatedAt: true },
     }),
+    prisma.collectorRun
+      .findFirst({ orderBy: { startedAt: "desc" } })
+      .catch(() => null),
     prisma.event.count({ where: { ...pendingWhere, ...collectorWhere } }),
   ]);
-  const lastRun = lastCollection._max.updatedAt;
+  const lastRun = lastRunRecord?.startedAt ?? lastCollection._max.updatedAt;
   const stats = [
     { Icon: CalendarCheck, label: "Publicados", value: published },
     { Icon: CalendarClock, label: "Próximos", value: upcoming },
@@ -110,7 +120,28 @@ export default async function Admin() {
         <p>
           Última coleta:{" "}
           <b>{lastRun ? formatCollection(lastRun) : "Nenhuma coleta ainda"}</b>
+          {lastRunRecord && (
+            <>
+              {" "}
+              • {lastRunRecord.source} •{" "}
+              <b>{RUN_STATUS[lastRunRecord.status] ?? lastRunRecord.status}</b>
+            </>
+          )}
         </p>
+        {lastRunRecord && (
+          <p>
+            Resultado: <b>{lastRunRecord.upsertedCount}</b> gravados de{" "}
+            <b>{lastRunRecord.fetchedCount}</b> processados
+            {lastRunRecord.invalidCount > 0 && (
+              <> ({lastRunRecord.invalidCount} inválidos)</>
+            )}
+          </p>
+        )}
+        {lastRunRecord?.errorMessage && (
+          <p className="auth-error" role="alert">
+            {lastRunRecord.errorMessage}
+          </p>
+        )}
         <p>
           Pendentes de revisão: <b>{symplaPending}</b>{" "}
           {symplaPending > 0 && (

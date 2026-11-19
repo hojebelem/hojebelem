@@ -1,10 +1,12 @@
 """
 Testes para o upsert de eventos no Postgres.
 """
+from datetime import datetime, timezone
 import os, pytest
 try:
-    from collector.db_upsert import upsert_event
+    from collector.db_upsert import record_collector_run, upsert_event
 except ImportError:
+    record_collector_run = None
     upsert_event = None
 
 DB_URL = os.environ.get("DATABASE_URL",
@@ -65,3 +67,47 @@ def test_upsert_duplicate():
     """Mesmo externalId deve fazer update, nao inserir duplicata."""
     result = upsert_event(DB_URL, EVENT)
     assert result is True  # update bem-sucedido
+
+
+@pytest.mark.skipif(record_collector_run is None, reason="record_collector_run nao implementado")
+def test_record_collector_run_truncates_error_and_commits():
+    """Registra CollectorRun sem banco real usando conexao simulada."""
+    calls = []
+
+    class FakeCursor:
+        def execute(self, sql, params):
+            calls.append((sql, params))
+
+        def close(self):
+            pass
+
+    class FakeConn:
+        committed = False
+
+        def cursor(self):
+            return FakeCursor()
+
+        def commit(self):
+            self.committed = True
+
+        def rollback(self):
+            pass
+
+    conn = FakeConn()
+    started = datetime(2026, 11, 19, 3, 0, tzinfo=timezone.utc)
+    ok = record_collector_run(
+        conn,
+        "sympla",
+        started,
+        "ERROR",
+        fetched_count=10,
+        upserted_count=0,
+        invalid_count=4,
+        error_message="x" * 700,
+    )
+    assert ok is True
+    assert conn.committed is True
+    assert len(calls) == 1
+    assert calls[0][1][0] == "sympla"
+    assert calls[0][1][2] == "ERROR"
+    assert len(calls[0][1][6]) == 500

@@ -1805,6 +1805,16 @@ button {
 .profile-edit-form {
   margin-inline: auto;
 }
+.profile-edit-form + .profile-edit-form {
+  margin-top: 28px;
+}
+.profile-edit-form > .admin-danger {
+  width: max-content;
+  border-radius: 12px;
+  padding: 13px 20px;
+  font-size: 14px;
+  font-weight: 800;
+}
 .legal-page {
   max-width: 760px;
 }

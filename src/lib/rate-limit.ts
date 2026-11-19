@@ -89,3 +89,8 @@ export const resetPasswordLimiter = createRateLimiter({
   max: 10,
   windowMs: 15 * 60 * 1000,
 });
+
+export const accountSecurityLimiter = createRateLimiter({
+  max: 10,
+  windowMs: 15 * 60 * 1000,
+});

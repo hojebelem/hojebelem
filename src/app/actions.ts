@@ -8,6 +8,7 @@ import { AuthError } from "next-auth";
 import { revalidatePath, updateTag } from "next/cache";
 import { CATEGORIES_TAG, EVENTS_TAG } from "@/lib/data";
 import {
+  accountSecurityLimiter,
   loginLimiter,
   passwordResetEmailLimiter,
   passwordResetIpLimiter,
@@ -538,6 +539,102 @@ export async function updateProfileAction(formData: FormData) {
 
   revalidatePath("/perfil");
   redirect("/perfil");
+}
+
+export async function changePasswordAction(formData: FormData) {
+  const session = await getSession();
+  if (!session?.user?.id) redirect("/login?callbackUrl=/perfil/editar");
+  if (!accountSecurityLimiter.hit(`pw:${session.user.id}`))
+    redirect("/perfil/editar?erro=limite");
+
+  const parsed = z
+    .object({
+      currentPassword: z.string().optional(),
+      newPassword: z.string().min(8).max(128),
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/perfil/editar?erro=senha-nova");
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, passwordHash: true },
+  });
+  if (!user) redirect("/login");
+
+  if (user.passwordHash) {
+    const ok =
+      Boolean(parsed.data.currentPassword) &&
+      (await bcrypt.compare(parsed.data.currentPassword!, user.passwordHash));
+    if (!ok) redirect("/perfil/editar?erro=senha-atual");
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 12) },
+  });
+  redirect("/perfil/editar?aviso=senha");
+}
+
+export async function deleteAccountAction(formData: FormData) {
+  const session = await getSession();
+  if (!session?.user?.id) redirect("/login?callbackUrl=/perfil/editar");
+  if (!accountSecurityLimiter.hit(`del:${session.user.id}`))
+    redirect("/perfil/editar?erro=limite");
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, role: true, passwordHash: true, avatarUrl: true },
+  });
+  if (!user) redirect("/");
+
+  if (user.passwordHash) {
+    const currentPassword = String(formData.get("currentPassword") ?? "");
+    if (
+      !currentPassword ||
+      !(await bcrypt.compare(currentPassword, user.passwordHash))
+    ) {
+      redirect("/perfil/editar?erro=senha-atual");
+    }
+  } else {
+    const confirmText = String(formData.get("confirmText") ?? "").trim();
+    if (confirmText !== "EXCLUIR") {
+      redirect("/perfil/editar?erro=confirmacao");
+    }
+  }
+
+  if (user.role === "ADMIN") {
+    const admins = await prisma.user.count({ where: { role: "ADMIN" } });
+    if (admins <= 1) redirect("/perfil/editar?erro=ultimo-admin");
+  }
+
+  const deleted = await prisma.$transaction(async (tx) => {
+    // remove envios/rascunhos não publicados do usuário; publicados ficam sob um admin
+    await tx.event.deleteMany({
+      where: { createdById: user.id, isPublished: false },
+    });
+    const remainingPublished = await tx.event.count({
+      where: { createdById: user.id },
+    });
+    if (remainingPublished > 0) {
+      const fallbackAdmin = await tx.user.findFirst({
+        where: { role: "ADMIN", id: { not: user.id } },
+        select: { id: true },
+      });
+      if (!fallbackAdmin) return false;
+      await tx.event.updateMany({
+        where: { createdById: user.id },
+        data: { createdById: fallbackAdmin.id },
+      });
+    }
+    await tx.user.delete({ where: { id: user.id } });
+    return true;
+  });
+
+  if (!deleted) redirect("/perfil/editar?erro=excluir");
+
+  await deleteProfileImage(user.avatarUrl);
+  revalidateEventPages();
+  await signOut({ redirectTo: "/" });
 }
 
 const categorySchema = z.object({
