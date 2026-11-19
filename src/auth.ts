@@ -39,6 +39,7 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
           id: user.id,
           name: user.name,
           email: user.email,
+          image: user.avatarUrl,
           role: user.role,
         };
       },
@@ -50,6 +51,8 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
       if (trigger === "update" && session?.user) {
         if (typeof session.user.name === "string") token.name = session.user.name;
         if (typeof session.user.email === "string") token.email = session.user.email;
+        if ("image" in session.user)
+          token.picture = session.user.image ?? null;
       } else if (account?.provider === "google" && user?.email && profile?.email_verified) {
         const email = normalizeEmail(user.email);
         const existing = await prisma.user.findFirst({
@@ -62,8 +65,10 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
           }));
         token.sub = db.id;
         token.role = db.role;
+        token.picture = db.avatarUrl ?? null;
       } else if (user && "role" in user) {
         token.role = user.role;
+        token.picture = user.image ?? null;
       }
       return token;
     },
@@ -71,6 +76,8 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
       if (session.user) {
         session.user.id = token.sub!;
         session.user.role = token.role as "USER" | "ADMIN" | "ORGANIZER";
+        session.user.image =
+          typeof token.picture === "string" ? token.picture : null;
       }
       return session;
     },

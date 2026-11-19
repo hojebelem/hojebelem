@@ -1,21 +1,20 @@
 import Link from "next/link";
 import { getSession } from "@/lib/session";
+import { safeAvatarUrl } from "@/lib/validation";
 import { Heart, UserRound } from "lucide-react";
+import { DesktopNav } from "./desktop-nav";
 import { Logo } from "./logo";
 import { HeaderSearch } from "./header-search";
 
 export async function Header() {
   const session = await getSession();
   const label = session?.user?.name || session?.user?.email;
+  const avatarUrl = safeAvatarUrl(session?.user?.image);
   return (
     <header className="site-header">
       <div className="shell header-inner">
         <Logo />
-        <nav className="desktop-nav" aria-label="Navegação principal">
-          <Link href="/eventos">Eventos</Link>
-          <Link href="/explorar">Explorar</Link>
-          <Link href="/wishlist">Favoritos</Link>
-        </nav>
+        <DesktopNav />
         <div className="header-actions">
           <HeaderSearch />
           <Link href="/wishlist" aria-label="Favoritos">
@@ -26,8 +25,13 @@ export async function Header() {
               href="/perfil"
               className="header-user"
               aria-label={`Perfil de ${label}`}
+              style={
+                avatarUrl
+                  ? { backgroundImage: `url("${avatarUrl}")` }
+                  : undefined
+              }
             >
-              {label.charAt(0).toUpperCase()}
+              {avatarUrl ? null : label.charAt(0).toUpperCase()}
             </Link>
           ) : (
             <Link href="/perfil" aria-label="Perfil">

@@ -1,4 +1,4 @@
-import { Camera, MapPin } from "lucide-react";
+import { Calendar, Camera, Compass, MapPin, Music, Sparkles, Ticket } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "./logo";
 
@@ -6,11 +6,11 @@ export function Footer() {
   return (
     <footer className="site-footer">
       <div className="footer-confetti" aria-hidden="true">
-        <span>🎵</span>
-        <span>🍹</span>
-        <span>🪩</span>
-        <span>🎉</span>
-        <span>🍻</span>
+        <span><Music /></span>
+        <span><Sparkles /></span>
+        <span><Ticket /></span>
+        <span><Calendar /></span>
+        <span><Compass /></span>
       </div>
       <div className="shell footer-main">
         <div className="footer-brand">
@@ -53,7 +53,7 @@ export function Footer() {
       </div>
       <div className="footer-bottom shell">
         <span>© {new Date().getFullYear()} Hoje Belém</span>
-        <span>Feito com ritmo, afeto e açaí 💜</span>
+        <span>Feito com ritmo, afeto e açaí</span>
       </div>
     </footer>
   );

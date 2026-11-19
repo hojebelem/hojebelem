@@ -51,7 +51,7 @@ export function EventCard({ event }: { event: CardEvent }) {
           <Link href={`/eventos/${event.slug}`}>{event.title}</Link>
         </h3>
         <p>
-          <MapPin /> {event.venueName}
+          <MapPin /> <span>{event.venueName}</span>
         </p>
         <p className="event-when">{formatEventFullDate(event.startAt)}</p>
         <div className="event-price">

@@ -551,7 +551,7 @@ export async function updateProfileAction(formData: FormData) {
     await deleteProfileImage(current.avatarUrl);
   }
 
-  await unstable_update({ user: { name: data.name } });
+  await unstable_update({ user: { name: data.name, image: nextAvatarUrl } });
   revalidatePath("/", "layout");
   revalidatePath("/perfil");
   redirect(removeAvatar ? "/perfil/editar?aviso=foto-removida" : "/perfil");
