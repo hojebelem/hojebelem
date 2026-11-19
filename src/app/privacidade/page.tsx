@@ -28,10 +28,11 @@ export default function Privacy() {
         </p>
         <h2>Com quem compartilhamos</h2>
         <p>
-          Não vendemos seus dados. Eles ficam em provedores de hospedagem e
-          banco de dados contratados para operar o site. Ao clicar em links de
-          compra ou de redes sociais, você sai da Hoje Belém e passa a seguir
-          a política daquele serviço.
+          Não vendemos seus dados. Eles ficam em provedores de hospedagem, banco
+          de dados e envio de e-mails transacionais (como redefinição de senha)
+          contratados para operar o site. Ao clicar em links de compra ou de
+          redes sociais, você sai da Hoje Belém e passa a seguir a política
+          daquele serviço.
         </p>
         <h2>Cookies</h2>
         <p>

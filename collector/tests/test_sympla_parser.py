@@ -5,6 +5,7 @@ O parser extrai eventos do HTML da página de listagem decodificando
 o payload Flight (Next.js). Os dados vêm como JSON escapado e precisam
 ser balanceados para extrair cada objeto de evento completo.
 """
+import json
 import os
 import pytest
 
@@ -15,9 +16,46 @@ except ImportError:
     parse_sympla_list = None  # RED — ainda não existe
 
 FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "sympla_belem_p1.html")
+HAS_FIXTURE = os.path.exists(FIXTURE)
 
 
 @pytest.mark.skipif(parse_sympla_list is None, reason="parser ainda nao implementado")
+def test_parse_flight_payload_inline():
+    """Extrai eventos de chunks Next.js Flight e evita duplicatas por URL."""
+    payload = [
+        {
+            "id": 3483046,
+            "name": "The Black Parade | Belem/PA",
+            "url": "https://www.sympla.com.br/evento/the-black-parade/3483046",
+            "start_date": "2026-08-23T01:00:00+00:00",
+            "images": {
+                "original": "https://images.sympla.com.br/a.jpg",
+                "xs": "https://images.sympla.com.br/a-xs.jpg",
+                "lg": "https://images.sympla.com.br/a-lg.jpg",
+            },
+        },
+        {
+            "id": 3483046,
+            "name": "The Black Parade | Belem/PA",
+            "url": "https://www.sympla.com.br/evento/the-black-parade/3483046",
+            "images": {
+                "original": "https://images.sympla.com.br/a.jpg",
+                "xs": "https://images.sympla.com.br/a-xs.jpg",
+                "lg": "https://images.sympla.com.br/a-lg.jpg",
+            },
+        },
+    ]
+    chunk = json.dumps(json.dumps(payload, separators=(",", ":")))
+    html = f"<script>self.__next_f.push([1,{chunk}])</script>"
+    events = parse_sympla_list(html)
+    assert len(events) == 1
+    assert events[0]["id"] == 3483046
+
+
+@pytest.mark.skipif(
+    parse_sympla_list is None or not HAS_FIXTURE,
+    reason="parser ou snapshot sympla_belem_p1.html ausente",
+)
 def test_parse_extracts_12_events():
     """RED: o parser deve extrair pelo menos 12 eventos da pagina de Belem."""
     with open(FIXTURE, encoding="utf-8", errors="replace") as f:
@@ -26,7 +64,10 @@ def test_parse_extracts_12_events():
     assert len(events) >= 12, f"esperado >=12, obtido {len(events)}"
 
 
-@pytest.mark.skipif(parse_sympla_list is None, reason="parser ainda nao implementado")
+@pytest.mark.skipif(
+    parse_sympla_list is None or not HAS_FIXTURE,
+    reason="parser ou snapshot sympla_belem_p1.html ausente",
+)
 def test_each_event_has_required_keys():
     """Cada evento deve ter os campos minimos para normalizacao."""
     with open(FIXTURE, encoding="utf-8", errors="replace") as f:
@@ -39,7 +80,10 @@ def test_each_event_has_required_keys():
         assert not missing, f"evento {ev.get('name','?')} sem campos: {missing}"
 
 
-@pytest.mark.skipif(parse_sympla_list is None, reason="parser ainda nao implementado")
+@pytest.mark.skipif(
+    parse_sympla_list is None or not HAS_FIXTURE,
+    reason="parser ou snapshot sympla_belem_p1.html ausente",
+)
 def test_events_have_unique_ids():
     """IDs de evento nao devem se repetir (dedupe interno do parser)."""
     with open(FIXTURE, encoding="utf-8", errors="replace") as f:

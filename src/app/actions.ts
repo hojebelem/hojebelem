@@ -9,11 +9,21 @@ import { revalidatePath, updateTag } from "next/cache";
 import { CATEGORIES_TAG, EVENTS_TAG } from "@/lib/data";
 import {
   loginLimiter,
+  passwordResetEmailLimiter,
+  passwordResetIpLimiter,
   profileUpdateLimiter,
   registerEmailLimiter,
   registerIpLimiter,
+  resetPasswordLimiter,
   submitEventLimiter,
 } from "@/lib/rate-limit";
+import { passwordResetEnabled } from "@/lib/env";
+import {
+  createResetToken,
+  parseResetToken,
+  sendPasswordResetEmail,
+  verifyResetToken,
+} from "@/lib/password-reset";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -101,6 +111,80 @@ export async function registerAction(formData: FormData) {
     password: parsed.data.password,
     redirectTo: "/",
   });
+}
+
+export async function requestPasswordResetAction(formData: FormData) {
+  if (!passwordResetEnabled) redirect("/esqueci-senha?erro=indisponivel");
+  const parsed = z
+    .object({ email: z.string().email() })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/esqueci-senha?erro=dados");
+
+  const email = normalizeEmail(parsed.data.email);
+  const ipKey = await clientIpKey();
+  if (
+    !passwordResetEmailLimiter.hit(email) ||
+    !passwordResetIpLimiter.hit(ipKey)
+  ) {
+    redirect("/esqueci-senha?erro=tentativas");
+  }
+
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+    select: { id: true, email: true, passwordHash: true },
+  });
+  if (user) {
+    const base = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000")
+      .replace(/\/$/, "");
+    const token = createResetToken(user.id, user.passwordHash);
+    try {
+      await sendPasswordResetEmail(
+        user.email,
+        `${base}/redefinir-senha?token=${encodeURIComponent(token)}`,
+      );
+    } catch (error) {
+      console.error("Erro ao enviar e-mail de redefinição:", error);
+      redirect("/esqueci-senha?erro=envio");
+    }
+  }
+  redirect("/esqueci-senha?enviado=1");
+}
+
+export async function resetPasswordAction(formData: FormData) {
+  const ipKey = await clientIpKey();
+  if (!resetPasswordLimiter.hit(ipKey)) redirect("/redefinir-senha?erro=tentativas");
+
+  const parsed = z
+    .object({
+      token: z.string().min(1),
+      password: z.string().min(8).max(128),
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const token = String(formData.get("token") ?? "");
+    redirect(
+      `/redefinir-senha?erro=dados${token ? `&token=${encodeURIComponent(token)}` : ""}`,
+    );
+  }
+
+  const payload = parseResetToken(parsed.data.token);
+  if (!payload) {
+    redirect("/redefinir-senha?erro=token");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.uid },
+    select: { id: true, passwordHash: true },
+  });
+  if (!user || !verifyResetToken(parsed.data.token, user)) {
+    redirect("/redefinir-senha?erro=token");
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await bcrypt.hash(parsed.data.password, 12) },
+  });
+  redirect("/login?aviso=senha-redefinida");
 }
 
 const eventSchema = z.object({

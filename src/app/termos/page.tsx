@@ -44,6 +44,13 @@ export default function Terms() {
           Como tratamos seus dados está na{" "}
           <Link href="/privacidade">Política de privacidade</Link>.
         </p>
+        <h2>Conteúdo de terceiros e remoção</h2>
+        <p>
+          Marcas, imagens e descrições pertencem aos respectivos organizadores e
+          plataformas de origem. Se você for responsável por um evento e quiser
+          corrigir ou remover uma publicação, fale com a gente pela página de{" "}
+          <Link href="/contato">contato</Link>.
+        </p>
         <h2>Mudanças nestes termos</h2>
         <p>
           Estes termos podem ser atualizados. A versão em vigor é sempre a

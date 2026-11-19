@@ -10,7 +10,7 @@ const allowedTypes = new Map([
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const LOCAL_UPLOAD_PREFIX = "/uploads/";
 
-function getUploadDirectory() {
+export function getUploadDirectory() {
   return path.resolve(
     /* turbopackIgnore: true */ process.cwd(),
     process.env.UPLOAD_DIR ?? "public/uploads",

@@ -11,16 +11,24 @@ const errors: Record<string, string> = {
   tentativas: "Muitas tentativas. Espere alguns minutos e tente de novo.",
 };
 
+const notices: Record<string, string> = {
+  "senha-redefinida": "Senha atualizada. Entre com a nova senha.",
+};
+
 export function AuthCard({
   mode,
   error,
+  notice,
   callbackUrl,
   google,
+  passwordReset = false,
 }: {
   mode: "login" | "cadastro";
   error?: string;
+  notice?: string;
   callbackUrl?: string;
   google: boolean;
+  passwordReset?: boolean;
 }) {
   const signup = mode === "cadastro";
   return (
@@ -33,6 +41,11 @@ export function AuthCard({
           ? "Salve seus rolês favoritos e descubra novas experiências."
           : "Seus eventos favoritos estão esperando por você."}
       </p>
+      {notice && notices[notice] && (
+        <p className="form-success" role="status">
+          {notices[notice]}
+        </p>
+      )}
       {error && errors[error] && (
         <p className="auth-error" role="alert">
           {errors[error]}
@@ -75,6 +88,11 @@ export function AuthCard({
             autoComplete={signup ? "new-password" : "current-password"}
           />
         </label>
+        {!signup && passwordReset && (
+          <Link className="auth-forgot" href="/esqueci-senha">
+            Esqueci minha senha
+          </Link>
+        )}
         <button className="gradient-button" type="submit">
           {signup ? "Criar conta" : "Entrar"}
         </button>

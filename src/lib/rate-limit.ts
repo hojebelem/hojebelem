@@ -74,3 +74,18 @@ export const profileUpdateLimiter = createRateLimiter({
   max: 15,
   windowMs: 15 * 60 * 1000,
 });
+
+export const passwordResetEmailLimiter = createRateLimiter({
+  max: 5,
+  windowMs: 15 * 60 * 1000,
+});
+
+export const passwordResetIpLimiter = createRateLimiter({
+  max: 15,
+  windowMs: 15 * 60 * 1000,
+});
+
+export const resetPasswordLimiter = createRateLimiter({
+  max: 10,
+  windowMs: 15 * 60 * 1000,
+});

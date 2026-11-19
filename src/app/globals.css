@@ -1855,10 +1855,19 @@ button {
   letter-spacing: -1px;
   margin: 8px 0;
 }
-.auth-card > p:not(.eyebrow):not(.auth-switch):not(.auth-error) {
+.auth-card > p:not(.eyebrow):not(.auth-switch):not(.auth-error):not(.form-success) {
   font-size: 15px;
   color: var(--muted);
   line-height: 1.6;
+}
+.auth-card .form-success {
+  margin: 18px 0 0;
+}
+.auth-forgot {
+  justify-self: end;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--violet);
 }
 .auth-error {
   margin: 18px 0 0;

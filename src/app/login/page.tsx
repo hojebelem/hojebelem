@@ -1,19 +1,21 @@
 import { AuthCard } from "@/components/auth-card";
-import { googleEnabled } from "@/lib/env";
+import { googleEnabled, passwordResetEnabled } from "@/lib/env";
 
 export default async function Login({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string; callbackUrl?: string }>;
+  searchParams: Promise<{ erro?: string; aviso?: string; callbackUrl?: string }>;
 }) {
-  const { erro, callbackUrl } = await searchParams;
+  const { erro, aviso, callbackUrl } = await searchParams;
   return (
     <div className="auth-page">
       <AuthCard
         mode="login"
         error={erro}
+        notice={aviso}
         callbackUrl={callbackUrl}
         google={googleEnabled}
+        passwordReset={passwordResetEnabled}
       />
     </div>
   );
