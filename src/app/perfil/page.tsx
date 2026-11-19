@@ -11,7 +11,7 @@ import Link from "next/link";
 import { logoutAction } from "@/app/actions";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { isSafeUrlOrPath } from "@/lib/validation";
+import { safeAvatarUrl } from "@/lib/validation";
 
 export default async function Profile() {
   const session = await getSession();
@@ -19,11 +19,7 @@ export default async function Profile() {
     ? await prisma.user.findUnique({ where: { id: session.user.id } })
     : null;
   const name = user?.name ?? session?.user?.name ?? "Visitante";
-  const rawAvatar = user?.avatarUrl ?? session?.user?.image;
-  const avatarUrl =
-    rawAvatar && isSafeUrlOrPath(rawAvatar)
-      ? rawAvatar.replace(/["\\\n\r]/g, "")
-      : null;
+  const avatarUrl = safeAvatarUrl(user?.avatarUrl ?? session?.user?.image);
   const initial = name.slice(0, 2).toUpperCase();
   const items = [
     { href: "/perfil/editar", label: "Editar perfil", icon: UserRound },

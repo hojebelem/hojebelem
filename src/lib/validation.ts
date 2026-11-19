@@ -38,3 +38,9 @@ export const safeUrlOrPathSchema = z
 export function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
+
+export function safeAvatarUrl(value: string | null | undefined): string | null {
+  return value && isSafeUrlOrPath(value)
+    ? value.replace(/["\\\n\r]/g, "")
+    : null;
+}

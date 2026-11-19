@@ -6,7 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { normalizeEmail } from "@/lib/validation";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   session: { strategy: "jwt" },
   providers: [
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
@@ -46,8 +46,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   pages: { signIn: "/login" },
   callbacks: {
-    async jwt({ token, user, account, profile }) {
-      if (account?.provider === "google" && user?.email && profile?.email_verified) {
+    async jwt({ token, user, account, profile, trigger, session }) {
+      if (trigger === "update" && session?.user) {
+        if (typeof session.user.name === "string") token.name = session.user.name;
+        if (typeof session.user.email === "string") token.email = session.user.email;
+      } else if (account?.provider === "google" && user?.email && profile?.email_verified) {
         const email = normalizeEmail(user.email);
         const existing = await prisma.user.findFirst({
           where: { email: { equals: email, mode: "insensitive" } },

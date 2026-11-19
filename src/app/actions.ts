@@ -1,7 +1,7 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { signIn, signOut } from "@/auth";
+import { signIn, signOut, unstable_update } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
@@ -511,6 +511,7 @@ export async function updateProfileAction(formData: FormData) {
   if (!profileUpdateLimiter.hit(session.user.id))
     redirect("/perfil/editar?erro=limite");
 
+  const removeAvatar = formData.get("removeAvatar") === "1";
   const parsed = z
     .object({
       name: z.string().trim().min(2).max(80),
@@ -522,7 +523,7 @@ export async function updateProfileAction(formData: FormData) {
   const data = parsed.data;
   const attachment = formData.get("avatarFile");
   let uploadedAvatar: string | null = null;
-  if (attachment instanceof File && attachment.size > 0) {
+  if (!removeAvatar && attachment instanceof File && attachment.size > 0) {
     try {
       uploadedAvatar = await saveProfileImage(attachment);
     } catch {
@@ -530,7 +531,9 @@ export async function updateProfileAction(formData: FormData) {
     }
   }
 
-  const nextAvatarUrl = uploadedAvatar ?? (data.avatarUrl || null);
+  const nextAvatarUrl = removeAvatar
+    ? null
+    : (uploadedAvatar ?? (data.avatarUrl || null));
   const current = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { avatarUrl: true },
@@ -548,8 +551,60 @@ export async function updateProfileAction(formData: FormData) {
     await deleteProfileImage(current.avatarUrl);
   }
 
+  await unstable_update({ user: { name: data.name } });
+  revalidatePath("/", "layout");
   revalidatePath("/perfil");
-  redirect("/perfil");
+  redirect(removeAvatar ? "/perfil/editar?aviso=foto-removida" : "/perfil");
+}
+
+export async function changeEmailAction(formData: FormData) {
+  const session = await getSession();
+  if (!session?.user?.id) redirect("/login?callbackUrl=/perfil/editar");
+  if (!accountSecurityLimiter.hit(`email:${session.user.id}`))
+    redirect("/perfil/editar?erro=limite");
+
+  const parsed = z
+    .object({
+      email: z.string().email(),
+      currentPassword: z.string().min(1),
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/perfil/editar?erro=email-dados");
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, email: true, passwordHash: true },
+  });
+  if (!user) redirect("/login");
+  if (
+    !user.passwordHash ||
+    !(await bcrypt.compare(parsed.data.currentPassword, user.passwordHash))
+  ) {
+    redirect("/perfil/editar?erro=senha-atual");
+  }
+
+  const nextEmail = normalizeEmail(parsed.data.email);
+  if (nextEmail === normalizeEmail(user.email)) {
+    redirect("/perfil/editar?aviso=email");
+  }
+
+  const existing = await prisma.user.findFirst({
+    where: {
+      email: { equals: nextEmail, mode: "insensitive" },
+      id: { not: user.id },
+    },
+    select: { id: true },
+  });
+  if (existing) redirect("/perfil/editar?erro=email-em-uso");
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { email: nextEmail },
+  });
+  await unstable_update({ user: { email: nextEmail } });
+  revalidatePath("/", "layout");
+  revalidatePath("/perfil");
+  redirect("/perfil/editar?aviso=email");
 }
 
 export async function changePasswordAction(formData: FormData) {
@@ -586,6 +641,45 @@ export async function changePasswordAction(formData: FormData) {
   redirect("/perfil/editar?aviso=senha");
 }
 
+async function deleteUserSafely(
+  userId: string,
+  avatarUrl: string | null,
+  preferredAdminId?: string,
+) {
+  const deleted = await prisma.$transaction(async (tx) => {
+    // remove envios/rascunhos não publicados do usuário; publicados ficam sob um admin
+    await tx.event.deleteMany({
+      where: { createdById: userId, isPublished: false },
+    });
+    const remainingPublished = await tx.event.count({
+      where: { createdById: userId },
+    });
+    if (remainingPublished > 0) {
+      const fallbackId =
+        preferredAdminId && preferredAdminId !== userId
+          ? preferredAdminId
+          : (
+              await tx.user.findFirst({
+                where: { role: "ADMIN", id: { not: userId } },
+                select: { id: true },
+              })
+            )?.id;
+      if (!fallbackId) return false;
+      await tx.event.updateMany({
+        where: { createdById: userId },
+        data: { createdById: fallbackId },
+      });
+    }
+    await tx.user.delete({ where: { id: userId } });
+    return true;
+  });
+
+  if (!deleted) return false;
+  await deleteProfileImage(avatarUrl);
+  revalidateEventPages();
+  return true;
+}
+
 export async function deleteAccountAction(formData: FormData) {
   const session = await getSession();
   if (!session?.user?.id) redirect("/login?callbackUrl=/perfil/editar");
@@ -618,33 +712,10 @@ export async function deleteAccountAction(formData: FormData) {
     if (admins <= 1) redirect("/perfil/editar?erro=ultimo-admin");
   }
 
-  const deleted = await prisma.$transaction(async (tx) => {
-    // remove envios/rascunhos não publicados do usuário; publicados ficam sob um admin
-    await tx.event.deleteMany({
-      where: { createdById: user.id, isPublished: false },
-    });
-    const remainingPublished = await tx.event.count({
-      where: { createdById: user.id },
-    });
-    if (remainingPublished > 0) {
-      const fallbackAdmin = await tx.user.findFirst({
-        where: { role: "ADMIN", id: { not: user.id } },
-        select: { id: true },
-      });
-      if (!fallbackAdmin) return false;
-      await tx.event.updateMany({
-        where: { createdById: user.id },
-        data: { createdById: fallbackAdmin.id },
-      });
-    }
-    await tx.user.delete({ where: { id: user.id } });
-    return true;
-  });
+  if (!(await deleteUserSafely(user.id, user.avatarUrl))) {
+    redirect("/perfil/editar?erro=excluir");
+  }
 
-  if (!deleted) redirect("/perfil/editar?erro=excluir");
-
-  await deleteProfileImage(user.avatarUrl);
-  revalidateEventPages();
   await signOut({ redirectTo: "/" });
 }
 
@@ -707,5 +778,28 @@ export async function updateUserRoleAction(id: string, formData: FormData) {
     }
   }
   await prisma.user.updateMany({ where: { id }, data: { role } });
+  revalidatePath("/admin/usuarios");
+}
+
+export async function adminDeleteUserAction(id: string) {
+  const admin = await requireAdminUser();
+  if (id === admin.id) redirect("/admin/usuarios?erro=excluir-proprio");
+
+  const target = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, role: true, avatarUrl: true },
+  });
+  if (!target) {
+    revalidatePath("/admin/usuarios");
+    return;
+  }
+  if (target.role === "ADMIN") {
+    const admins = await prisma.user.count({ where: { role: "ADMIN" } });
+    if (admins <= 1) redirect("/admin/usuarios?erro=ultimo-admin");
+  }
+
+  if (!(await deleteUserSafely(target.id, target.avatarUrl, admin.id))) {
+    redirect("/admin/usuarios?erro=excluir");
+  }
   revalidatePath("/admin/usuarios");
 }

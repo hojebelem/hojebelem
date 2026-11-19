@@ -1,4 +1,5 @@
-import { updateUserRoleAction } from "@/app/actions";
+import { adminDeleteUserAction, updateUserRoleAction } from "@/app/actions";
+import { AdminConfirmButton } from "@/components/admin-confirm-button";
 import { prisma } from "@/lib/prisma";
 import { requireAdminPage } from "@/lib/session";
 import type { Prisma } from "@prisma/client";
@@ -16,7 +17,9 @@ const ROLES = [
 
 const errors: Record<string, string> = {
   proprio: "Você não pode tirar o seu próprio papel de Admin.",
+  "excluir-proprio": "Use Editar perfil para excluir sua própria conta.",
   "ultimo-admin": "O sistema precisa ter pelo menos um Admin.",
+  excluir: "Não foi possível excluir este usuário.",
   dados: "Papel inválido.",
 };
 
@@ -38,7 +41,7 @@ export default async function AdminUsers({
 }: {
   searchParams: Promise<{ q?: string; pagina?: string; erro?: string }>;
 }) {
-  await requireAdminPage("/admin/usuarios");
+  const currentAdmin = await requireAdminPage("/admin/usuarios");
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const where: Prisma.UserWhereInput = q
@@ -101,23 +104,35 @@ export default async function AdminUsers({
                 {user.email} • desde {dateFormat.format(user.createdAt)}
               </small>
             </div>
-            <form
-              className="admin-inline-form"
-              action={updateUserRoleAction.bind(null, user.id)}
-            >
-              <select
-                name="role"
-                defaultValue={user.role}
-                aria-label={`Papel de ${user.name}`}
+            <div className="admin-user-actions">
+              <form
+                className="admin-inline-form"
+                action={updateUserRoleAction.bind(null, user.id)}
               >
-                {ROLES.map((role) => (
-                  <option key={role.value} value={role.value}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
-              <button type="submit">Salvar</button>
-            </form>
+                <select
+                  name="role"
+                  defaultValue={user.role}
+                  aria-label={`Papel de ${user.name}`}
+                >
+                  {ROLES.map((role) => (
+                    <option key={role.value} value={role.value}>
+                      {role.label}
+                    </option>
+                  ))}
+                </select>
+                <button type="submit">Salvar</button>
+              </form>
+              {user.id !== currentAdmin.id && (
+                <form action={adminDeleteUserAction.bind(null, user.id)}>
+                  <AdminConfirmButton
+                    className="admin-danger"
+                    message={`Excluir a conta de "${user.name ?? user.email}"? Os favoritos e envios não publicados serão removidos.`}
+                  >
+                    Excluir
+                  </AdminConfirmButton>
+                </form>
+              )}
+            </div>
           </article>
         ))}
         {users.length === 0 && <p>Nenhum usuário encontrado.</p>}

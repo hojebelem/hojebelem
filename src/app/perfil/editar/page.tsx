@@ -1,4 +1,5 @@
 import {
+  changeEmailAction,
   changePasswordAction,
   deleteAccountAction,
   updateProfileAction,
@@ -6,6 +7,7 @@ import {
 import { AdminConfirmButton } from "@/components/admin-confirm-button";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { safeAvatarUrl } from "@/lib/validation";
 import { redirect } from "next/navigation";
 
 const PROFILE_ERRORS: Record<string, string> = {
@@ -13,6 +15,8 @@ const PROFILE_ERRORS: Record<string, string> = {
     "Confira os dados: nome com 2 a 80 caracteres e URL iniciando com https:// ou /uploads/.",
   imagem: "Imagem inválida. Envie JPG, PNG ou WebP de até 5 MB.",
   limite: "Muitas alterações seguidas. Aguarde alguns minutos.",
+  "email-dados": "Informe um e-mail válido e sua senha atual.",
+  "email-em-uso": "Esse e-mail já está em uso por outra conta.",
   "senha-atual": "Senha atual incorreta.",
   "senha-nova": "A nova senha precisa ter pelo menos 8 caracteres.",
   confirmacao: 'Digite "EXCLUIR" exatamente para confirmar.',
@@ -24,6 +28,8 @@ const PROFILE_ERRORS: Record<string, string> = {
 
 const PROFILE_NOTICES: Record<string, string> = {
   senha: "Senha atualizada com sucesso.",
+  email: "E-mail atualizado com sucesso.",
+  "foto-removida": "Foto de perfil removida.",
 };
 
 export default async function EditProfile({
@@ -40,6 +46,8 @@ export default async function EditProfile({
     where: { id: session.user.id },
   });
   const hasPassword = Boolean(user.passwordHash);
+  const avatarUrl = safeAvatarUrl(user.avatarUrl);
+  const initial = (user.name ?? user.email).slice(0, 2).toUpperCase();
   return (
     <div className="profile-page shell page-space">
       <div className="page-intro">
@@ -62,6 +70,26 @@ export default async function EditProfile({
         action={updateProfileAction}
       >
         <section>
+          <div className="profile-edit-preview">
+            <div
+              className="avatar"
+              style={
+                avatarUrl
+                  ? { backgroundImage: `url("${avatarUrl}")` }
+                  : undefined
+              }
+            >
+              {avatarUrl ? null : initial}
+            </div>
+            <div>
+              <b>Foto atual</b>
+              <small>
+                {avatarUrl
+                  ? "Você pode enviar outra foto ou remover a atual."
+                  : "Nenhuma foto definida ainda."}
+              </small>
+            </div>
+          </div>
           <label>
             Nome
             <input
@@ -97,9 +125,63 @@ export default async function EditProfile({
             URL.
           </small>
         </section>
-        <button className="gradient-button" type="submit">
-          Salvar perfil
-        </button>
+        <div className="profile-edit-actions">
+          <button className="gradient-button" type="submit">
+            Salvar perfil
+          </button>
+          {avatarUrl && (
+            <button
+              className="profile-secondary-button"
+              type="submit"
+              name="removeAvatar"
+              value="1"
+            >
+              Remover foto
+            </button>
+          )}
+        </div>
+      </form>
+
+      <form
+        className="event-form profile-edit-form"
+        action={changeEmailAction}
+      >
+        <section>
+          <h2>E-mail da conta</h2>
+          {hasPassword ? (
+            <>
+              <label>
+                E-mail
+                <input
+                  type="email"
+                  name="email"
+                  defaultValue={user.email}
+                  autoComplete="email"
+                  required
+                />
+              </label>
+              <label>
+                Senha atual
+                <input
+                  type="password"
+                  name="currentPassword"
+                  autoComplete="current-password"
+                  required
+                />
+              </label>
+            </>
+          ) : (
+            <small>
+              E-mail atual: <b>{user.email}</b>. Defina uma senha abaixo antes
+              de alterar o e-mail da conta.
+            </small>
+          )}
+        </section>
+        {hasPassword && (
+          <button className="gradient-button" type="submit">
+            Atualizar e-mail
+          </button>
+        )}
       </form>
 
       <form

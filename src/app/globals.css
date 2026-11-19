@@ -1808,12 +1808,50 @@ button {
 .profile-edit-form + .profile-edit-form {
   margin-top: 28px;
 }
+.profile-edit-preview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.profile-edit-preview .avatar {
+  margin: 0;
+  flex-shrink: 0;
+  background-position: center;
+  background-size: cover;
+}
+.profile-edit-preview > div:last-child {
+  display: grid;
+  gap: 3px;
+}
+.profile-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.profile-edit-actions > .gradient-button {
+  width: max-content;
+}
+.profile-secondary-button {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 12px;
+  padding: 13px 18px;
+  font-size: 14px;
+  font-weight: 800;
+}
 .profile-edit-form > .admin-danger {
   width: max-content;
   border-radius: 12px;
   padding: 13px 20px;
   font-size: 14px;
   font-weight: 800;
+}
+.admin-user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 .legal-page {
   max-width: 760px;

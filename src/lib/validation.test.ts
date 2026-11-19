@@ -4,6 +4,7 @@ import {
   isSafeLocalPath,
   isSafeUrlOrPath,
   normalizeEmail,
+  safeAvatarUrl,
 } from "./validation";
 
 describe("validation helpers", () => {
@@ -33,5 +34,10 @@ describe("validation helpers", () => {
 
   it("normaliza e-mails removendo espaços e maiúsculas", () => {
     expect(normalizeEmail("  User@Example.COM ")).toBe("user@example.com");
+  });
+
+  it("sanitiza avatarUrl para uso seguro em CSS", () => {
+    expect(safeAvatarUrl('/uploads/a"b.webp')).toBe("/uploads/ab.webp");
+    expect(safeAvatarUrl("javascript:alert(1)")).toBeNull();
   });
 });
