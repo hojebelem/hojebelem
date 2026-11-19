@@ -420,16 +420,24 @@ export async function toggleWishlistAction(eventId: string) {
   const where = { userId: session.user.id, eventId };
   const removed = await prisma.wishlist.deleteMany({ where });
   if (removed.count === 0) {
-    const event = await prisma.event.findFirst({
-      where: { id: eventId, isPublished: true, rejectedAt: null },
-      select: { id: true },
-    });
+    const [event, userExists] = await Promise.all([
+      prisma.event.findFirst({
+        where: { id: eventId, isPublished: true, rejectedAt: null },
+        select: { id: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { id: true },
+      }),
+    ]);
+    if (!userExists) redirect("/login");
     if (event) {
       await prisma.wishlist.createMany({ data: [where], skipDuplicates: true });
     }
   }
   revalidatePath("/");
   revalidatePath("/eventos");
+  revalidatePath("/eventos/[slug]", "page");
   revalidatePath("/explorar");
   revalidatePath("/wishlist");
 }
@@ -441,15 +449,24 @@ export async function confirmFavoriteAction(eventId: string, volta: string) {
     const aqui = `/favoritar/${encodeURIComponent(eventId)}?volta=${encodeURIComponent(destino)}`;
     redirect(`/login?callbackUrl=${encodeURIComponent(aqui)}`);
   }
-  const event = await prisma.event.findFirst({
-    where: { id: eventId, isPublished: true, rejectedAt: null },
-    select: { id: true },
-  });
+  const [event, userExists] = await Promise.all([
+    prisma.event.findFirst({
+      where: { id: eventId, isPublished: true, rejectedAt: null },
+      select: { id: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true },
+    }),
+  ]);
+  if (!userExists) redirect("/login");
   if (event) {
     await prisma.wishlist.createMany({
       data: [{ userId: session.user.id, eventId: event.id }],
       skipDuplicates: true,
     });
+    revalidatePath("/");
+    revalidatePath("/eventos/[slug]", "page");
     revalidatePath("/wishlist");
   }
   redirect(destino);
@@ -470,13 +487,18 @@ export async function submitEventAction(formData: FormData) {
   if ("error" in parsed) redirect(`/divulgar?erro=${parsed.error}`);
   const { input, values } = parsed;
 
-  const [city, category] = await Promise.all([
+  const [city, category, userExists] = await Promise.all([
     prisma.city.findUniqueOrThrow({ where: { slug: "belem" } }),
     prisma.category.findUnique({
       where: { id: input.category },
       select: { id: true },
     }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true },
+    }),
   ]);
+  if (!userExists) redirect("/login?callbackUrl=/divulgar");
   if (!category) redirect("/divulgar?erro=dados");
 
   const slug = makeSlug(input.title);
@@ -538,6 +560,7 @@ export async function updateProfileAction(formData: FormData) {
     where: { id: session.user.id },
     select: { avatarUrl: true },
   });
+  if (!current) redirect("/login");
 
   await prisma.user.update({
     where: { id: session.user.id },

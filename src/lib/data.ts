@@ -3,7 +3,11 @@ import { unstable_cache } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { categories, demoEvents } from "./catalog";
-import { eventDateRange, startOfTodayInBelem } from "./events";
+import {
+  eventDateRange,
+  neighborhoodMatchTerms,
+  startOfTodayInBelem,
+} from "./events";
 
 // Eventos e categorias ficam em cache por alguns minutos; as ações do admin
 // limpam a tag na hora (updateTag). O coletor grava direto no banco, então os
@@ -51,6 +55,8 @@ export const eventCardSelect = {
   startAt: true,
   endAt: true,
   venueName: true,
+  latitude: true,
+  longitude: true,
   price: true,
   statusOverride: true,
   isFeatured: true,
@@ -60,12 +66,16 @@ export const eventCardSelect = {
 export function toEvent<
   T extends {
     price: { toString(): string } | null;
+    latitude?: { toString(): string } | number | null;
+    longitude?: { toString(): string } | number | null;
     categories: { category: { name: string; slug: string; icon: string } }[];
   },
 >(e: T) {
   return {
     ...e,
-    price: e.price ? Number(e.price) : null,
+    price: e.price != null ? Number(e.price) : null,
+    latitude: e.latitude != null ? Number(e.latitude) : null,
+    longitude: e.longitude != null ? Number(e.longitude) : null,
     category: e.categories[0]?.category ?? {
       name: "Evento",
       slug: "eventos",
@@ -79,12 +89,14 @@ export type EventsQuery = {
   category?: string;
   price?: string;
   date?: string;
+  neighborhood?: string;
   featured?: boolean;
 };
 
 // filtros compartilhados por listagem e contagem
 function eventsWhere(query: EventsQuery): Prisma.EventWhereInput {
   const range = eventDateRange(query.date);
+  const neighborhoodTerms = neighborhoodMatchTerms(query.neighborhood);
   const search = query.search?.trim().slice(0, MAX_SEARCH_LENGTH);
   return {
     isPublished: true,
@@ -107,6 +119,15 @@ function eventsWhere(query: EventsQuery): Prisma.EventWhereInput {
                 { endAt: { gte: range.from } },
                 { endAt: null, startAt: { gte: range.from } },
               ],
+            },
+          ]
+        : []),
+      ...(neighborhoodTerms
+        ? [
+            {
+              OR: neighborhoodTerms.map((term) => ({
+                address: { contains: term, mode: "insensitive" as const },
+              })),
             },
           ]
         : []),
@@ -168,25 +189,38 @@ const queryCachedEvents = unstable_cache(
     category?: string,
     price?: string,
     date?: string,
+    neighborhood?: string,
     featured?: boolean,
     sort?: string,
     take = EVENTS_PAGE_SIZE,
-  ) => fetchEventsFromDb({ category, price, date, featured }, sort, take),
+  ) =>
+    fetchEventsFromDb(
+      { category, price, date, neighborhood, featured },
+      sort,
+      take,
+    ),
   ["events-list"],
   { tags: [EVENTS_TAG], revalidate: 300 },
 );
 
 const queryCachedEventsCount = unstable_cache(
-  (category?: string, price?: string, date?: string, featured?: boolean) =>
+  (
+    category?: string,
+    price?: string,
+    date?: string,
+    neighborhood?: string,
+    featured?: boolean,
+  ) =>
     prisma.event.count({
-      where: eventsWhere({ category, price, date, featured }),
+      where: eventsWhere({ category, price, date, neighborhood, featured }),
     }),
   ["events-count"],
   { tags: [EVENTS_TAG], revalidate: 300 },
 );
 
-// no modo demo, só busca, categoria e preço valem; data e ordem são ignoradas
+// no modo demo, só busca, categoria, bairro e preço valem; data e ordem são ignoradas
 function demoMatches(query?: EventsQuery) {
+  const neighborhoodTerms = neighborhoodMatchTerms(query?.neighborhood);
   return demoEvents.filter(
     (e) =>
       (!query?.search ||
@@ -194,6 +228,10 @@ function demoMatches(query?: EventsQuery) {
           .toLowerCase()
           .includes(query.search.toLowerCase())) &&
       (!query?.category || e.category.slug === query.category) &&
+      (!neighborhoodTerms ||
+        neighborhoodTerms.some((term) =>
+          e.address.toLowerCase().includes(term),
+        )) &&
       (!query?.price ||
         (query.price === "gratuito" ? e.price == null : e.price != null)) &&
       (!query?.featured || e.isFeatured),
@@ -213,6 +251,7 @@ export async function getEvents(
           query?.category,
           query?.price,
           query?.date,
+          query?.neighborhood,
           query?.featured,
           query?.sort,
           take,
@@ -234,6 +273,7 @@ export async function countEvents(query?: EventsQuery) {
           query?.category,
           query?.price,
           query?.date,
+          query?.neighborhood,
           query?.featured,
         );
   } catch (error) {

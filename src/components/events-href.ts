@@ -1,5 +1,8 @@
 export type EventsParams = Partial<
-  Record<"q" | "categoria" | "preco" | "ordem" | "destaque" | "data" | "pagina", string>
+  Record<
+    "q" | "categoria" | "preco" | "ordem" | "destaque" | "data" | "bairro" | "visao" | "pagina",
+    string
+  >
 >;
 
 // URL de /eventos com os parâmetros atuais, trocando só os de `changes`

@@ -8,6 +8,23 @@ export const SOURCE_LABELS: Record<string, string> = {
   shotgun: "Shotgun",
 };
 
+export const BELEM_NEIGHBORHOODS = [
+  { slug: "cidade-velha", label: "Cidade Velha", terms: ["cidade velha"] },
+  { slug: "campina", label: "Campina", terms: ["campina"] },
+  { slug: "nazare", label: "Nazaré", terms: ["nazaré", "nazare"] },
+  { slug: "batista-campos", label: "Batista Campos", terms: ["batista campos"] },
+  { slug: "reduto", label: "Reduto", terms: ["reduto"] },
+  { slug: "umarizal", label: "Umarizal", terms: ["umarizal"] },
+  { slug: "marco", label: "Marco", terms: ["marco"] },
+  { slug: "icoaraci", label: "Icoaraci", terms: ["icoaraci"] },
+  { slug: "mosqueiro", label: "Mosqueiro", terms: ["mosqueiro"] },
+] as const;
+
+export function neighborhoodMatchTerms(slug: string | undefined): readonly string[] | null {
+  if (!slug) return null;
+  return BELEM_NEIGHBORHOODS.find((b) => b.slug === slug)?.terms ?? null;
+}
+
 export function isCollectorSource(source: string | null | undefined) {
   return Boolean(source && source !== "manual" && source !== "organizador");
 }

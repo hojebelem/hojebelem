@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { eventDateRange, getEventStatus, isCollectorSource, isEventEnded, startOfTodayInBelem } from "./events";
+import {
+  eventDateRange,
+  getEventStatus,
+  isCollectorSource,
+  isEventEnded,
+  neighborhoodMatchTerms,
+  startOfTodayInBelem,
+} from "./events";
 const now = new Date("2026-08-14T12:00:00-03:00");
 describe("getEventStatus em America/Belem",()=>{
   it("calcula datas e respeita overrides",()=>{
@@ -51,5 +58,14 @@ describe("isCollectorSource", () => {
     expect(isCollectorSource("manual")).toBe(false);
     expect(isCollectorSource("organizador")).toBe(false);
     expect(isCollectorSource(null)).toBe(false);
+  });
+});
+
+describe("neighborhoodMatchTerms", () => {
+  it("resolve termos de busca por slug de bairro", () => {
+    expect(neighborhoodMatchTerms("nazare")).toEqual(["nazaré", "nazare"]);
+    expect(neighborhoodMatchTerms("batista-campos")).toEqual(["batista campos"]);
+    expect(neighborhoodMatchTerms("desconhecido")).toBeNull();
+    expect(neighborhoodMatchTerms(undefined)).toBeNull();
   });
 });

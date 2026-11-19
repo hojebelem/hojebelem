@@ -28,6 +28,10 @@ function formatEventTimeRange(start: Date, end: Date | null) {
     : `${formatEventTime(start)} até ${formatEventDate(end)}, ${formatEventTime(end)}`;
 }
 
+function withCity(text: string, suffix = "Belém") {
+  return /\bbel[eé]m\b/i.test(text) ? text : `${text}, ${suffix}`;
+}
+
 // link do Google Agenda já preenchido; sem hora final, assume 2 horas
 function googleCalendarUrl(e: {
   title: string;
@@ -43,11 +47,12 @@ function googleCalendarUrl(e: {
     action: "TEMPLATE",
     text: e.title,
     dates: `${stamp(e.startAt)}/${stamp(end)}`,
-    location: `${e.venueName}, ${e.address}, Belém - PA`,
+    location: withCity(`${e.venueName}, ${e.address}`, "Belém - PA"),
     details: e.externalPurchaseLink,
   });
   return `https://calendar.google.com/calendar/render?${params}`;
 }
+import { EventsMap } from "@/components/events-map";
 import { FavoriteButton } from "@/components/favorite-button";
 import { GoogleAdSlot } from "@/components/google-ads";
 import { isOptimizableImage } from "@/lib/images";
@@ -60,6 +65,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const e = await getEvent((await params).slug);
   if (!e) return { title: "Evento não encontrado" };
+  const ogImage = isSafeUrlOrPath(e.coverImageUrl)
+    ? e.coverImageUrl
+    : "/images/hero-belem.webp";
   return {
     title: e.title,
     description: e.description.slice(0, 150),
@@ -67,7 +75,7 @@ export async function generateMetadata({
     openGraph: {
       title: e.title,
       description: e.description.slice(0, 150),
-      images: [e.coverImageUrl],
+      images: [ogImage],
     },
   };
 }
@@ -83,6 +91,12 @@ export default async function EventDetail({
   const coverImageUrl = isSafeUrlOrPath(e.coverImageUrl)
     ? e.coverImageUrl
     : "/images/hero-belem.webp";
+  const baseUrl = (
+    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  ).replace(/\/$/, "");
+  const absoluteCoverUrl = coverImageUrl.startsWith("/")
+    ? `${baseUrl}${coverImageUrl}`
+    : coverImageUrl;
   const purchaseHref = isHttpUrl(e.externalPurchaseLink)
     ? e.externalPurchaseLink
     : null;
@@ -103,11 +117,11 @@ export default async function EventDetail({
           ? "https://schema.org/EventPostponed"
           : "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    image: [e.coverImageUrl],
+    image: [absoluteCoverUrl],
     location: {
       "@type": "Place",
       name: e.venueName,
-      address: `${e.address}, Belém - PA`,
+      address: withCity(e.address, "Belém - PA"),
     },
     offers: {
       "@type": "Offer",
@@ -154,7 +168,7 @@ export default async function EventDetail({
           </span>
           <h1>{e.title}</h1>
           <p>
-            <MapPin /> {e.venueName}, Belém
+            <MapPin /> {withCity(e.venueName, "Belém")}
           </p>
         </div>
       </div>
@@ -197,9 +211,25 @@ export default async function EventDetail({
             <p className="eyebrow">ONDE VAI SER</p>
             <h2>{e.venueName}</h2>
             <p>{e.address}</p>
+            {e.latitude != null && e.longitude != null && (
+              <EventsMap
+                compact
+                singlePin
+                events={[
+                  {
+                    id: e.id,
+                    slug: e.slug,
+                    title: e.title,
+                    venueName: e.venueName,
+                    latitude: e.latitude,
+                    longitude: e.longitude,
+                  },
+                ]}
+              />
+            )}
             <a
               className="detail-link"
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${e.venueName}, ${e.address}, Belém - PA`)}`}
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(withCity(`${e.venueName}, ${e.address}`, "Belém - PA"))}`}
               target="_blank"
               rel="noopener noreferrer"
             >

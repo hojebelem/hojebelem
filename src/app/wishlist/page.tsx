@@ -1,6 +1,7 @@
+import { EventsMap } from "@/components/events-map";
 import { EventSection } from "@/components/section";
 import { eventCardSelect, toEvent } from "@/lib/data";
-import { startOfTodayInBelem } from "@/lib/events";
+import { formatEventFullDate, startOfTodayInBelem } from "@/lib/events";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { Heart } from "lucide-react";
@@ -56,7 +57,29 @@ export default async function Wishlist() {
         <span>Todos os eventos que você quer viver em Belém.</span>
       </div>
       {events.length ? (
-        <EventSection title="Eventos salvos" events={events} />
+        <>
+          <section className="wishlist-map-section">
+            <div className="section-heading">
+              <div>
+                <p>ONDE VOCÊ VAI</p>
+                <h2>Mapa dos seus favoritos</h2>
+              </div>
+            </div>
+            <EventsMap
+              compact
+              events={events.map((e) => ({
+                id: e.id,
+                slug: e.slug,
+                title: e.title,
+                venueName: e.venueName,
+                when: formatEventFullDate(e.startAt),
+                latitude: e.latitude,
+                longitude: e.longitude,
+              }))}
+            />
+          </section>
+          <EventSection title="Eventos salvos" events={events} />
+        </>
       ) : (
         <div className="empty-state">
           <Heart />
@@ -64,11 +87,13 @@ export default async function Wishlist() {
           <p>Toque no coração de um evento para guardá-lo aqui.</p>
         </div>
       )}
-      <EventSection
-        eyebrow="COM BASE NOS SEUS FAVORITOS"
-        title="Você também pode gostar"
-        events={recommendations}
-      />
+      {recommendations.length > 0 && (
+        <EventSection
+          eyebrow="COM BASE NOS SEUS FAVORITOS"
+          title="Você também pode gostar"
+          events={recommendations}
+        />
+      )}
     </div>
   );
 }
