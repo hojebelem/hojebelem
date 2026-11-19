@@ -30,9 +30,7 @@ export default async function EditEvent({
   return (
     <div className="admin-page shell page-space">
       <div className="page-intro">
-        <p>EDITAR EVENTO</p>
         <h1>{event.title}</h1>
-        <span>Atualize as informações e salve para publicar as mudanças.</span>
       </div>
       <AdminEventForm
         categories={categories}

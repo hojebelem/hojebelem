@@ -39,7 +39,6 @@ export default async function AdminCategories({
     <div className="admin-page shell page-space">
       <div className="admin-heading">
         <div>
-          <p>CONTEÚDO</p>
           <h1>Categorias</h1>
           <span>
             {categories.length}{" "}

@@ -189,7 +189,6 @@ export default async function AdminEvents({
     <div className="admin-page shell page-space">
       <div className="admin-heading">
         <div>
-          <p>CONTEÚDO</p>
           <h1>Eventos</h1>
           <span>
             {total} {total === 1 ? "evento" : "eventos"}

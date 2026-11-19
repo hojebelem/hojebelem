@@ -13,9 +13,7 @@ export default async function Explore() {
   return (
     <div className="shell page-space">
       <div className="page-intro">
-        <p>DESCUBRA BELÉM</p>
-        <h1>Qual é a sua vibe?</h1>
-        <span>Explore a cidade por tudo que ela tem a oferecer.</span>
+        <h1>Explore por categoria</h1>
       </div>
       <section id="categorias" className="all-categories">
         <CategoryGrid categories={categories} />

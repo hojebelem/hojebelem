@@ -25,10 +25,9 @@ export default async function SubmitEvent({
   return (
     <div className="shell page-space">
       <div className="page-intro">
-        <p>DIVULGAÇÃO</p>
         <h1>Divulgue seu evento</h1>
         <span>
-          Envie os dados do seu evento. A equipe revisa antes de publicar.
+          Envie os dados do evento para a fila de revisão.
         </span>
       </div>
       {!session?.user?.id ? (

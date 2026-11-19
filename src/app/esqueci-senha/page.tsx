@@ -21,7 +21,6 @@ export default async function ForgotPassword({
     <div className="auth-page">
       <div className="auth-card">
         <Logo />
-        <p className="eyebrow">RECUPERAR ACESSO</p>
         <h1>Esqueci minha senha</h1>
         <p>
           {passwordResetEnabled

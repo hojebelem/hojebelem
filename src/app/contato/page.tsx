@@ -5,7 +5,6 @@ export const metadata = { title: "Contato" };
 export default function Contact() {
   return (
     <article className="legal-page shell page-space">
-      <p className="eyebrow">FALE COM A GENTE</p>
       <h1>Contato</h1>
       <section>
         <h2>Dúvidas, sugestões e correções</h2>

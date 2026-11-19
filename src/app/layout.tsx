@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   ),
   title: {
-    default: "Hoje Belém — eventos em Belém",
+    default: "Hoje Belém: eventos em Belém",
     template: "%s | Hoje Belém",
   },
   description:

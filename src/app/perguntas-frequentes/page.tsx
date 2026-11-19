@@ -1,7 +1,6 @@
 export default function FAQ() {
   return (
     <article className="legal-page shell page-space">
-      <p className="eyebrow">AJUDA</p>
       <h1>Perguntas frequentes</h1>
       <section>
         <h2>A Hoje Belém vende ingressos?</h2>

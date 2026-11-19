@@ -52,16 +52,13 @@ export default async function Wishlist() {
   return (
     <div className="shell page-space">
       <div className="page-intro">
-        <p>GUARDADOS PARA DEPOIS</p>
         <h1>Seus favoritos</h1>
-        <span>Todos os eventos que você quer viver em Belém.</span>
       </div>
       {events.length ? (
         <>
           <section className="wishlist-map-section">
             <div className="section-heading">
               <div>
-                <p>ONDE VOCÊ VAI</p>
                 <h2>Mapa dos seus favoritos</h2>
               </div>
             </div>
@@ -89,7 +86,6 @@ export default async function Wishlist() {
       )}
       {recommendations.length > 0 && (
         <EventSection
-          eyebrow="COM BASE NOS SEUS FAVORITOS"
           title="Você também pode gostar"
           events={recommendations}
         />

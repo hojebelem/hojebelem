@@ -200,7 +200,7 @@ export default async function EventDetail({
             </div>
           </div>
           <section>
-            <p className="eyebrow">SOBRE O EVENTO</p>
+            <h2>Sobre o evento</h2>
             <p className="description">{e.description}</p>
           </section>
           <GoogleAdSlot
@@ -208,7 +208,6 @@ export default async function EventDetail({
             format="rectangle"
           />
           <section>
-            <p className="eyebrow">ONDE VAI SER</p>
             <h2>{e.venueName}</h2>
             <p>{e.address}</p>
             {e.latitude != null && e.longitude != null && (

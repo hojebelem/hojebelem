@@ -36,13 +36,7 @@ export function AuthCard({
   return (
     <div className="auth-card">
       <Logo />
-      <p className="eyebrow">{signup ? "FAÇA PARTE" : "BEM-VINDO DE VOLTA"}</p>
-      <h1>{signup ? "Crie sua conta" : "Entre e viva mais Belém."}</h1>
-      <p>
-        {signup
-          ? "Salve seus rolês favoritos e descubra novas experiências."
-          : "Seus eventos favoritos estão esperando por você."}
-      </p>
+      <h1>{signup ? "Crie sua conta" : "Entrar no Hoje Belém"}</h1>
       {notice && notices[notice] && (
         <p className="form-success" role="status">
           {notices[notice]}

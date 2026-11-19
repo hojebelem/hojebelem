@@ -51,9 +51,7 @@ export default async function EditProfile({
   return (
     <div className="profile-page shell page-space">
       <div className="page-intro">
-        <p>SEU PERFIL</p>
         <h1>Editar perfil</h1>
-        <span>Atualize como seu nome e sua foto aparecem na plataforma.</span>
       </div>
       {aviso && PROFILE_NOTICES[aviso] && (
         <p className="form-success" role="status">
@@ -245,7 +243,6 @@ export default async function EditProfile({
               <input
                 type="text"
                 name="confirmText"
-                placeholder="EXCLUIR"
                 pattern="EXCLUIR"
                 required
               />

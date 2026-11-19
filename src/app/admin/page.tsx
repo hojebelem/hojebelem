@@ -92,9 +92,7 @@ export default async function Admin() {
     <div className="admin-page shell page-space">
       <div className="admin-heading">
         <div>
-          <p>PAINEL ADMINISTRATIVO</p>
-          <h1>Visão geral</h1>
-          <span>Gerencie o que acontece em Belém.</span>
+          <h1>Painel administrativo</h1>
         </div>
         <Link className="gradient-button" href="/admin/eventos/novo">
           <Plus /> Novo evento

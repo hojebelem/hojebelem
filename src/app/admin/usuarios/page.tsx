@@ -71,7 +71,6 @@ export default async function AdminUsers({
     <div className="admin-page shell page-space">
       <div className="admin-heading">
         <div>
-          <p>PESSOAS</p>
           <h1>Usuários</h1>
           <span>
             {total} {total === 1 ? "usuário" : "usuários"} • alterações de papel

@@ -76,9 +76,7 @@ export default async function EventsPage({
   return (
     <div className="shell page-space">
       <div className="page-intro">
-        <p>AGENDA DA CIDADE</p>
         <h1>Eventos em Belém</h1>
-        <span>Encontre o próximo lugar onde você quer estar.</span>
       </div>
       <SearchForm
         defaultValue={p.q}

@@ -30,7 +30,6 @@ export default async function Favoritar({
   const action = confirmFavoriteAction.bind(null, event.id, destino);
   return (
     <div className="shell page-space status-page">
-      <p className="eyebrow">FAVORITOS</p>
       <h1>Salvando {event.title}…</h1>
       <span>Se não redirecionar automaticamente, confirme abaixo.</span>
       <div className="status-actions">

@@ -5,7 +5,6 @@ export const metadata = { title: "Termos de uso" };
 export default function Terms() {
   return (
     <article className="legal-page shell page-space">
-      <p className="eyebrow">TERMOS DE USO</p>
       <h1>Termos de uso</h1>
       <section>
         <p>

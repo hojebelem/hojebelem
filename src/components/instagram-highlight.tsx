@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Camera, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 const posts = [
   { src: "/images/hero-musica.webp", alt: "Show em Belém" },
@@ -13,37 +13,23 @@ const posts = [
 export function InstagramHighlight() {
   return (
     <section className="instagram-highlight">
-      <div className="instagram-decoration" aria-hidden="true">
-        <span>✦</span>
-        <span>♪</span>
-        <span>🪩</span>
-        <span>✦</span>
-      </div>
       <div className="instagram-copy">
-        <p>
-          <Camera /> SIGA A GENTE
-        </p>
-        <h2>Belém acontece no Instagram também.</h2>
+        <h2>Hoje Belém no Instagram</h2>
         <span>
-          Descubra eventos, rolês, novidades e experiências que estão
-          acontecendo pela cidade.
+          Destaques da programação semanal e novidades em @hojebelem.
         </span>
         <a
           href="https://www.instagram.com/hojebelem/"
           target="_blank"
           rel="noopener noreferrer"
         >
-          Seguir no Instagram <b>→</b>
+          Seguir @hojebelem <b>→</b>
         </a>
       </div>
       <div
         className="instagram-visual"
         aria-label="Prévia do perfil da Hoje Belém no Instagram"
       >
-        <div className="social-float camera-float">
-          <Camera />
-        </div>
-        <div className="social-float music-float">♫</div>
         <div className="instagram-phone">
           <div className="phone-speaker" />
           <div className="instagram-profile-head">
@@ -65,15 +51,6 @@ export function InstagramHighlight() {
               </div>
             ))}
           </div>
-        </div>
-        <div className="mini-post">
-          <Image
-            src="/images/hero-musica.webp"
-            alt="Registro de música ao vivo"
-            fill
-            sizes="170px"
-          />
-          <span>É hoje ✦</span>
         </div>
       </div>
     </section>

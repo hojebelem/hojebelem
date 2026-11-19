@@ -68,7 +68,6 @@ export default async function Home() {
         <section className="categories-section">
           <div className="section-heading">
             <div>
-              <p>ENCONTRE SEU ROLÊ</p>
               <h2>Explore por categoria</h2>
             </div>
             <Link href="/explorar">Ver todas →</Link>
@@ -77,7 +76,6 @@ export default async function Home() {
         </section>
         {today.length > 0 && (
           <EventSection
-            eyebrow="ACONTECE AGORA"
             title="Hoje em Belém"
             href="/eventos?data=hoje"
             events={today}
@@ -85,7 +83,6 @@ export default async function Home() {
         )}
         {tomorrow.length > 0 && (
           <EventSection
-            eyebrow="PROGRAME-SE"
             title="Amanhã"
             href="/eventos?data=amanha"
             events={tomorrow}
@@ -93,7 +90,6 @@ export default async function Home() {
         )}
         {later.length > 0 && (
           <EventSection
-            eyebrow="NOS PRÓXIMOS DIAS"
             title="Em breve"
             events={later}
           />
@@ -108,7 +104,6 @@ export default async function Home() {
         <InstagramHighlight />
         {featured.length > 0 && (
           <EventSection
-            eyebrow="ESCOLHAS DA CURADORIA"
             title="Destaques"
             href="/eventos?destaque=1"
             events={featured}

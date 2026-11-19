@@ -14,9 +14,7 @@ export default async function NewEvent({
   return (
     <div className="admin-page shell page-space">
       <div className="page-intro">
-        <p>NOVO EVENTO</p>
-        <h1>Publique um rolê</h1>
-        <span>Preencha o essencial. Você poderá editar depois.</span>
+        <h1>Novo evento</h1>
       </div>
       <AdminEventForm
         categories={categories}

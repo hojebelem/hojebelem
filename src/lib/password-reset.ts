@@ -108,7 +108,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
     body: JSON.stringify({
       from,
       to: [to],
-      subject: "Redefinir senha — Hoje Belém",
+      subject: "Redefinir senha | Hoje Belém",
       text: `Você pediu para redefinir sua senha no Hoje Belém.\n\nAcesse o link abaixo (válido por 30 minutos):\n${resetUrl}\n\nSe não foi você, ignore este e-mail.`,
     }),
   });

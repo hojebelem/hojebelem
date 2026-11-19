@@ -22,7 +22,6 @@ export default async function ResetPassword({
     <div className="auth-page">
       <div className="auth-card">
         <Logo />
-        <p className="eyebrow">NOVA SENHA</p>
         <h1>Redefinir senha</h1>
         <p>Escolha uma nova senha com 8 ou mais caracteres.</p>
         {erro && errors[erro] && (
